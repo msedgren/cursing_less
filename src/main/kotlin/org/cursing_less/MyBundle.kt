@@ -1,4 +1,4 @@
-package com.github.msedgren.cursingless
+package org.cursing_less
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls
