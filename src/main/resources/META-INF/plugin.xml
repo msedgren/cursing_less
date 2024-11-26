@@ -11,4 +11,10 @@
     <applicationListeners>
         <listener class="org.cursing_less.listeners.CursingApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="cursing_less"
+                           displayType="BALLOON"
+                           key="cursing_less.notification.group.name"/>
+    </extensions>
 </idea-plugin>

@@ -23,11 +23,15 @@ abstract class CursingShape(val name: String) {
         return name.hashCode()
     }
 
+    override fun toString(): String {
+        return "CursingShape(name='$name')"
+    }
+
     class Circle: CursingShape("circle") {
         override fun calcWidthInPixels(inlay: Inlay<*>) = 1
 
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.fillOval(targetRegion.x, targetRegion.y, 5, 5)
+            g.fillOval(targetRegion.x, targetRegion.y - 1, 5, 5)
         }
     }
 
@@ -35,7 +39,7 @@ abstract class CursingShape(val name: String) {
         override fun calcWidthInPixels(inlay: Inlay<*>) = 1
 
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.fillRect(targetRegion.x, targetRegion.y, 5, 5)
+            g.fillRect(targetRegion.x, targetRegion.y - 1, 5, 5)
         }
     }
 
@@ -43,7 +47,7 @@ abstract class CursingShape(val name: String) {
         override fun calcWidthInPixels(inlay: Inlay<*>) = 1
 
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.drawLine(targetRegion.x + 1, targetRegion.y, targetRegion.x + 6, targetRegion.y - 5)
+            g.drawLine(targetRegion.x + 1, targetRegion.y - 1, targetRegion.x + 6, targetRegion.y - 6)
         }
     }
 
@@ -51,7 +55,7 @@ abstract class CursingShape(val name: String) {
         override fun calcWidthInPixels(inlay: Inlay<*>) = 1
 
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.drawLine(targetRegion.x + 6, targetRegion.y - 5, targetRegion.x + 1, targetRegion.y)
+            g.drawLine(targetRegion.x + 6, targetRegion.y - 6, targetRegion.x + 1, targetRegion.y - 1)
         }
     }
 
@@ -59,7 +63,7 @@ abstract class CursingShape(val name: String) {
         override fun calcWidthInPixels(inlay: Inlay<*>) = 1
 
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.drawLine(targetRegion.x + 1, targetRegion.y, targetRegion.x + 6, targetRegion.y)
+            g.drawLine(targetRegion.x + 1, targetRegion.y - 1, targetRegion.x + 6, targetRegion.y - 1)
         }
     };
 }
