@@ -11,9 +11,9 @@ class ColorAndShapeManager(
     private val shapes: Collection<CursingCoded<CursingShape>>
 ) {
 
-    private val permutations = colors.stream()
-        .flatMap { color -> shapes.stream().map { CursingCodedColorShape(color, it) } }
-        .collect(Collectors.toUnmodifiableSet())
+    private val permutations =
+        colors.stream().flatMap { color -> shapes.stream().map { CursingCodedColorShape(color, it) } }
+            .collect(Collectors.toUnmodifiableSet())
 
     private var consumed: MutableMap<Int, Pair<Char, CursingCodedColorShape>> = HashMap()
     private var offsetPreference: MutableMap<Int, CursingCodedColorShape> = HashMap()
@@ -30,11 +30,11 @@ class ColorAndShapeManager(
         val preference = offsetPreference[offset]
         val consumedThing = existing.consumeGivenOrRandomFree(preference)
         if (consumedThing != null) {
-            thisLogger().debug("Consumed ${consumedThing} at ${offset} for ${character}")
+            // thisLogger().trace("Consumed ${consumedThing} at ${offset} for ${character}")
             consumed.put(offset, Pair(character, consumedThing))
             offsetPreference.put(offset, consumedThing)
         } else {
-            thisLogger().warn("Failed to consume anythiing at ${offset} for ${character}")
+            thisLogger().debug("Failed to consume anythiing at ${offset} for ${character}")
         }
         return consumedThing
     }
@@ -47,7 +47,7 @@ class ColorAndShapeManager(
     fun free(offset: Int) {
         val freed = consumed.remove(offset)
         if (freed != null) {
-            thisLogger().debug("Freed ${freed} at ${offset}")
+            thisLogger().trace("Freed ${freed} at ${offset}")
             var existing = state.get(freed.first)
             if (existing != null) {
                 existing.returnFreed(freed.second)

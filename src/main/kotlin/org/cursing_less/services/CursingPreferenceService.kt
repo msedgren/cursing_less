@@ -9,14 +9,13 @@ import org.cursing_less.color_shape.CursingShape
 import java.awt.Color
 
 @Service(Service.Level.PROJECT)
-class CursingPreferenceService() {
+class CursingPreferenceService {
 
     private val colors = listOf(
         CursingColor("red", JBColor.RED),
         CursingColor("blue", JBColor.BLUE),
         CursingColor("green", JBColor.GREEN),
         CursingColor("yellow", JBColor(Color(255,212,0), Color(255,212,0))),
-        CursingColor("pink", JBColor.PINK),
         CursingColor("purple", JBColor(Color(191, 64, 191), Color(218, 112, 214)))
     )
 

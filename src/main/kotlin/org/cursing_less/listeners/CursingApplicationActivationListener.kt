@@ -5,6 +5,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationActivationListener
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.wm.IdeFrame
@@ -26,45 +27,11 @@ import kotlin.Exception
 internal class CursingApplicationActivationListener : ApplicationActivationListener {
 
     var caretListener: CursingCaretListener? = null
+    var cursingDeletionListener: CursingDeletionListener? = null
     var cursingVisibleAreaListener: CursingVisibleAreaListener? = null
 
     private var pathToNonce: Path? = null
     private var server: HttpServer? = null
-
-    fun cleanupListeners() {
-        if (caretListener != null) {
-            EditorFactory.getInstance().eventMulticaster.removeCaretListener(caretListener!!)
-            caretListener = null
-        }
-
-        if (cursingVisibleAreaListener != null) {
-            EditorFactory.getInstance().eventMulticaster.removeVisibleAreaListener(cursingVisibleAreaListener!!)
-            cursingVisibleAreaListener = null
-        }
-    }
-
-    override fun applicationActivated(ideFrame: IdeFrame) {
-        if (startupServer()) {
-            val eventMulticaster = EditorFactory.getInstance().eventMulticaster
-            caretListener = CursingCaretListener()
-            eventMulticaster.addCaretListener(caretListener!!, DoNothingDisposable())
-
-            cursingVisibleAreaListener = CursingVisibleAreaListener()
-            eventMulticaster.addVisibleAreaListener(cursingVisibleAreaListener!!, DoNothingDisposable())
-
-            VoiceCommand::class.sealedSubclasses
-                .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
-        }
-    }
-
-    override fun applicationDeactivated(ideFrame: IdeFrame) {
-        thisLogger().info("cleaning up listeners and shutting down server...")
-        cleanupListeners()
-        shutdownServer()
-    }
-
-    class DoNothingDisposable : Disposable.Default {
-    }
 
     companion object {
         val DEFAULT_PORT: Int = 8652
@@ -85,17 +52,60 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
         )
     }
 
-    fun startupServer(): Boolean {
+    override fun applicationActivated(ideFrame: IdeFrame) {
+        if (startupServer()) {
+            val eventMulticaster = EditorFactory.getInstance().eventMulticaster
+            caretListener = CursingCaretListener()
+            eventMulticaster.addCaretListener(caretListener!!, DoNothingDisposable())
+
+            cursingVisibleAreaListener = CursingVisibleAreaListener()
+            eventMulticaster.addVisibleAreaListener(cursingVisibleAreaListener!!, DoNothingDisposable())
+
+            cursingDeletionListener = CursingDeletionListener()
+            eventMulticaster.addDocumentListener(cursingDeletionListener!!, DoNothingDisposable())
+
+            VoiceCommand::class.sealedSubclasses
+                .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
+        }
+    }
+
+    override fun applicationDeactivated(ideFrame: IdeFrame) {
+        thisLogger().info("cleaning up listeners and shutting down server...")
+        cleanupListeners()
+        shutdownServer()
+    }
+
+    fun cleanupListeners() {
+        if (caretListener != null) {
+            EditorFactory.getInstance().eventMulticaster.removeCaretListener(caretListener!!)
+            caretListener = null
+        }
+
+        if (cursingVisibleAreaListener != null) {
+            EditorFactory.getInstance().eventMulticaster.removeVisibleAreaListener(cursingVisibleAreaListener!!)
+            cursingVisibleAreaListener = null
+        }
+
+        if (cursingDeletionListener != null) {
+            EditorFactory.getInstance().eventMulticaster.removeDocumentListener(cursingDeletionListener!!)
+            cursingDeletionListener = null
+        }
+    }
+
+    class DoNothingDisposable : Disposable.Default {
+    }
+
+    private fun startupServer(): Boolean {
         try {
             val random = SecureRandom()
             val bytes = ByteArray(20)
             random.nextBytes(bytes)
             val nonce = String(Base64.getUrlEncoder().encode(bytes))
-            //        String nonce = "localdev";
             val port: Int = PLATFORM_TO_PORT.getOrDefault(PlatformUtils.getPlatformPrefix(), DEFAULT_PORT)
             try {
-                pathToNonce = FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "vcidea_$port")
-                Files.write(pathToNonce, nonce.toByteArray())
+                val noncePath = FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "vcidea_$port")
+                pathToNonce = noncePath
+                Files.write(noncePath, nonce.toByteArray())
             } catch (e: IOException) {
                 thisLogger().error("Failed to write nonce file", e)
             }
@@ -104,10 +114,9 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
             val loopbackSocket = InetSocketAddress(InetAddress.getLoopbackAddress(), port)
             server = HttpServer.create(loopbackSocket, -1)
             server?.createContext("/$nonce", RequestHandler())
-            server?.setExecutor(null) // creates a default executor
+            server?.executor = null // creates a default executor
             server?.start()
 
-            notifyStartupSuccess(port, nonce)
             return true;
         } catch (e: Exception) {
             notifyStartupFailure(e)
@@ -116,11 +125,12 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
         return false;
     }
 
-    fun shutdownServer() {
+    private fun shutdownServer() {
         try {
             try {
-                if (pathToNonce != null) {
-                    Files.delete(pathToNonce)
+                val nonce = pathToNonce
+                if (nonce != null) {
+                    Files.delete(nonce)
                 }
             } catch (e: IOException) {
                 thisLogger().error("Failed to cleanup nonce file", e)
@@ -131,16 +141,6 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
             pathToNonce = null
             server = null
         }
-    }
-
-    private fun notifyStartupSuccess(port: Int, nonce: String) {
-        val note = NotificationGroupManager.getInstance()
-            .getNotificationGroup("cursing_less")
-            .createNotification(
-                MyBundle.message("cursing_less.success", port, nonce),
-                NotificationType.INFORMATION
-            )
-        Notifications.Bus.notify(note)
     }
 
     private fun notifyStartupFailure(exception: Exception) {
