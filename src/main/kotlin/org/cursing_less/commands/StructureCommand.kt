@@ -11,7 +11,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiUtilBase
 import java.util.*
 
-class StructureCommand : VoiceCommand {
+data object StructureCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "psi"
 
@@ -25,7 +25,7 @@ class StructureCommand : VoiceCommand {
 
         ApplicationManager.getApplication().invokeAndWait {
             val psiFile = pullPsiFile(project, editor)
-            if(psiFile != null) {
+            if (psiFile != null) {
                 val startingOffset = editor.caretModel.offset
                 var currentElement: PsiElement? = PsiUtilBase.getElementAtOffset(psiFile, startingOffset)
                 printHierarchy(currentElement)
@@ -46,13 +46,17 @@ class StructureCommand : VoiceCommand {
 
                 // CurrentElement is where we want to go
                 val result = currentElement!!.textRange
-                if (cursorMovement == "start") {
-                    editor.caretModel.moveToOffset(result.startOffset)
-                } else if (cursorMovement == "end") {
-                    editor.caretModel.moveToOffset(result.endOffset)
-                } else {
-                    editor.caretModel.moveToOffset(result.startOffset)
-                    editor.selectionModel.setSelection(result.startOffset, result.endOffset)
+                when (cursorMovement) {
+                    "start" -> {
+                        editor.caretModel.moveToOffset(result.startOffset)
+                    }
+                    "end" -> {
+                        editor.caretModel.moveToOffset(result.endOffset)
+                    }
+                    else -> {
+                        editor.caretModel.moveToOffset(result.startOffset)
+                        editor.selectionModel.setSelection(result.startOffset, result.endOffset)
+                    }
                 }
                 editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
                 IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
@@ -146,7 +150,7 @@ class StructureCommand : VoiceCommand {
             for (result in results) {
                 thisLogger().debug("Result " + result + " offset: " + result.textRange.startOffset + " > " + offset)
                 val dist = result.textRange.startOffset - offset
-                if (dist > 0 && dist <= distance) {
+                if (dist in 1..distance) {
                     best = result
                     distance = dist
                 }
@@ -154,10 +158,7 @@ class StructureCommand : VoiceCommand {
             return best
         } else if (direction == "last") {
             results.sortWith(Comparator { o1: PsiElement, o2: PsiElement ->
-                -Integer.compare(
-                    o1.textRange.endOffset,
-                    o2.textRange.endOffset
-                )
+                -o1.textRange.endOffset.compareTo(o2.textRange.endOffset)
             })
             var best: PsiElement? = null
             var distance = 9999
@@ -167,7 +168,7 @@ class StructureCommand : VoiceCommand {
                             + offset)
                 )
                 val dist = offset - result.textRange.endOffset
-                if (dist > 0 && dist <= distance) {
+                if (dist in 1..distance) {
                     best = result
                     distance = dist
                 }
@@ -202,5 +203,6 @@ class StructureCommand : VoiceCommand {
         return false
     }
 
-    fun pullPsiFile(project: Project, editor: Editor) = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
+    private fun pullPsiFile(project: Project, editor: Editor) =
+        PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
 }

@@ -9,7 +9,7 @@ import com.intellij.openapi.ui.playback.commands.ActionCommand
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowManager
 
-class GivenActionCommand : VoiceCommand {
+data object ActionCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "action"
 
@@ -20,10 +20,8 @@ class GivenActionCommand : VoiceCommand {
             val action = ActionManager.getInstance().getAction(actionId)
             val event = ActionCommand.getInputEvent(actionId)
             val toolWindow = pullToolWindow(project)
-            if(toolWindow != null) {
-                var component = toolWindow.component
-                ActionManager.getInstance().tryToExecute(action, event, component, null, true)
-            }
+            val component = toolWindow?.component
+            ActionManager.getInstance().tryToExecute(action, event, component, null, true)
         }
         return "OK"
     }
@@ -32,7 +30,7 @@ class GivenActionCommand : VoiceCommand {
         val twm = ToolWindowManager.getInstance(project)
         val tw = twm.getToolWindow(twm.activeToolWindowId)
         if (tw == null) {
-            thisLogger().error("No selected tool window?")
+            thisLogger().debug("No selected tool window")
         }
         return tw
     }

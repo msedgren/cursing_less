@@ -8,7 +8,7 @@ import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.IdeFocusManager
 
-class FindCommand : VoiceCommand {
+data object FindCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "find"
 

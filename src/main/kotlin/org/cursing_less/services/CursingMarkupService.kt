@@ -6,6 +6,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.*
 import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.getOrCreateUserData
 import com.intellij.openapi.util.text.StringUtil
@@ -31,61 +32,57 @@ class CursingMarkupService {
 
 
     companion object {
-        private val INLAY_NAME = "CURSING_INLAY"
-        val INLAY_KEY = Key.create<CursingCodedColorShape>(INLAY_NAME);
-
+        private const val INLAY_NAME = "CURSING_INLAY"
+        val INLAY_KEY = Key.create<CursingCodedColorShape>(INLAY_NAME)
     }
 
     fun updateHighlightedTokens(editor: Editor, cursorOffset: Int) {
         debouncer.debounce { updateHighlightedTokensNow(editor, cursorOffset) }
     }
 
-    fun clearTokensAround(editor: Editor, cursorOffset: Int) {
-        ApplicationManager.getApplication().invokeAndWait {
-            if (!editor.isDisposed) {
-                editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset + 1)
-                    .filter { it.getUserData(INLAY_KEY) != null }
-                    .forEach { it.dispose() }
+    private fun updateHighlightedTokensNow(editor: Editor, cursorOffset: Int) {
+        val project = editor.project
+        if (project != null && !editor.isDisposed) {
+            val colorAndShapeManager = pullColorAndShapeManager(editor, project)
+            colorAndShapeManager.freeAll()
+            val existingInlays = pullExistingInlaysByOffset(editor)
+
+            val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
+            if (file != null) {
+                findTokensBasedOffOffset(editor, file, cursorOffset, colorAndShapeManager)
+                    .forEach { (offset, cursingColorShape) ->
+                        val existing = existingInlays[offset]
+                        if (existing?.second == cursingColorShape) {
+                            // thisLogger().trace("Already showing ${cursingColorShape} at ${offset}")
+                            existingInlays.remove(offset)
+                            existing.first.repaint()
+                        } else {
+                            thisLogger().trace("Showing ${cursingColorShape} at ${offset}")
+                            addColoredShapeAboveToken(editor, cursingColorShape, offset)
+                        }
+                    }
+
+                existingInlays.forEach { (_, pair) ->
+                    thisLogger().trace("Removing ${pair.second} at ${pair.first.offset}")
+                    pair.first.dispose()
+                }
             }
         }
     }
 
-    private fun updateHighlightedTokensNow(editor: Editor, cursorOffset: Int) {
-        val project = editor.project
-        if (project != null && !editor.isDisposed) {
-            val cursingPreferenceService = project.getService(CursingPreferenceService::class.java)
-            val colorAndShapeManager = editor.getOrCreateUserData(ColorAndShapeManager.KEY) {
-                thisLogger().info("Generating new ColorAndShapeInlayManager for editor")
-                ColorAndShapeManager(
-                    cursingPreferenceService.codedColors,
-                    cursingPreferenceService.codedShapes
-                )
-            }
-            colorAndShapeManager.freeAll()
+    private fun pullExistingInlaysByOffset(editor: Editor): MutableMap<Int, Pair<Inlay<*>, CursingCodedColorShape>> {
+        return editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength - 1)
+            .map { it.getUserData(INLAY_KEY)?.let { data -> Pair(it, data) } }
+            .filterNotNull()
+            .associateTo(mutableMapOf()) { Pair(it.first.offset, it) }
+    }
 
-            this.thisLogger().info("Removing old inlays")
-            WriteAction.run<Exception> {
-                editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength)
-                    .filter { it.getUserData(INLAY_KEY) != null }
-                    .forEach { it.dispose() }
-            }
 
-            val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
-            if (file != null) {
-                thisLogger().debug("looking for tokens")
-                val found: List<Triple<PsiElement, Int, CursingCodedColorShape>> = findTokensBasedOffOffset(
-                    editor,
-                    file,
-                    cursorOffset,
-                    colorAndShapeManager
-                )
-                    .filter { !editor.inlayModel.hasInlineElementAt(it.first.textRange.startOffset + it.second) }
-
-                this.thisLogger().debug("adding inlays")
-                found.forEach { (element, additionalOffset, cursingColorShape) ->
-                    addColoredShapeAboveToken(editor, element, cursingColorShape, additionalOffset)
-                }
-            }
+    private fun pullColorAndShapeManager(editor: Editor, project: Project): ColorAndShapeManager {
+        val cursingPreferenceService = project.getService(CursingPreferenceService::class.java)
+        return editor.getOrCreateUserData(ColorAndShapeManager.KEY) {
+            thisLogger().info("Generating new ColorAndShapeInlayManager for editor")
+            ColorAndShapeManager(cursingPreferenceService.codedColors, cursingPreferenceService.codedShapes)
         }
     }
 
@@ -94,8 +91,9 @@ class CursingMarkupService {
         file: PsiFile,
         offset: Int,
         colorAndShapeManager: ColorAndShapeManager
-    ): List<Triple<PsiElement, Int, CursingCodedColorShape>> {
-        val found = ArrayList<Triple<PsiElement, Int, CursingCodedColorShape>>()
+    ):
+            List<Pair<Int, CursingCodedColorShape>> {
+        val found = ArrayList<Pair<Int, CursingCodedColorShape>>()
         var nextElement = findElementFromOffset(file, offset)
         var previousElement = if (nextElement != null) PsiTreeUtil.prevVisibleLeaf(nextElement) else null
         while ((nextElement != null && isAnyPartVisible(
@@ -117,24 +115,22 @@ class CursingMarkupService {
         return found
     }
 
-    private fun consumeIfVisible(
-        element: PsiElement,
-        editor: Editor,
-        colorAndShapeManager: ColorAndShapeManager
-    ): List<Triple<PsiElement, Int, CursingCodedColorShape>> {
+    private fun consumeIfVisible(element: PsiElement, editor: Editor, colorAndShapeManager: ColorAndShapeManager):
+            List<Pair<Int, CursingCodedColorShape>> {
         if (!StringUtil.isEmptyOrSpaces(element.text) && isAnyPartVisible(editor, element)) {
             return findTokensWithin(element)
-                .map { Pair(it, element.text.get(it)) }
+                .map { Pair(it, element.text[it]) }
                 .mapNotNull { pair ->
-                    val consumed = colorAndShapeManager.consume(pair.second, element.startOffset + pair.first)
-                    if (consumed != null) Triple(element, pair.first, consumed) else null
+                    val offset = element.startOffset + pair.first
+                    val consumed = colorAndShapeManager.consume(pair.second, offset)
+                    if (consumed != null) Pair(offset, consumed) else null
                 }
                 .toList()
         }
         return emptyList()
     }
 
-    fun findTokensWithin(element: PsiElement?): List<Int> {
+    private fun findTokensWithin(element: PsiElement?): List<Int> {
         val text = if (element == null) "" else element.text
 
         return if (StringUtil.isEmptyOrSpaces(text)) {
@@ -142,15 +138,15 @@ class CursingMarkupService {
         } else {
             reg.findAll(text).iterator()
                 .asSequence()
-                .map { it.range.start }
+                .map { it.range.first }
                 .toList()
         }
     }
 
     private fun findElementFromOffset(file: PsiFile, offset: Int): PsiElement? {
-        var next = offset;
-        var previous = offset;
-        var element = file.findElementAt(offset);
+        var next = offset
+        var previous = offset
+        var element = file.findElementAt(offset)
         while (element == null && (previous > 0 || next < (file.endOffset - 1))) {
             if (previous > 0) {
                 element = file.findElementAt(--previous)
@@ -159,7 +155,7 @@ class CursingMarkupService {
                 element = file.findElementAt(++next)
             }
         }
-        return element;
+        return element
     }
 
     private fun isAnyPartVisible(editor: Editor, element: PsiElement): Boolean {
@@ -169,27 +165,11 @@ class CursingMarkupService {
 
     private fun addColoredShapeAboveToken(
         editor: Editor,
-        token: PsiElement,
         cursingCodedColorShape: CursingCodedColorShape,
-        relativeOffset: Int
+        offset: Int
     ) {
-        val offset = token.textRange.startOffset + relativeOffset
-        val inlay = editor.inlayModel.addInlineElement(offset, ColoredShapeRenderer(cursingCodedColorShape))
-
-        inlay?.putUserData(INLAY_KEY, cursingCodedColorShape)
-    }
-
-    class SpaceRenderer : EditorCustomElementRenderer {
-        override fun calcWidthInPixels(inlay: Inlay<*>): Int {
-            return 1
-        }
-
-        override fun calcHeightInPixels(inlay: Inlay<*>): Int {
-            return 1
-        }
-
-        override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-        }
+        editor.inlayModel.addInlineElement(offset, ColoredShapeRenderer(cursingCodedColorShape))
+            ?.putUserData(INLAY_KEY, cursingCodedColorShape)
     }
 
 

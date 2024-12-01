@@ -8,7 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.IdeFocusManager
 import kotlin.math.max
 
-class GotoCommand : VoiceCommand {
+data object GotoCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "goto"
 

@@ -1,17 +1,16 @@
-package org.cursing_less.commands
+package org.cursing_less.services
 
 import com.intellij.openapi.components.Service
+import org.cursing_less.commands.VoiceCommand
 import kotlin.reflect.full.createInstance
 
 @Service(Service.Level.PROJECT)
-class VoiceCommandParser {
+class VoiceCommandParserService {
 
     private val knownCommands: List<VoiceCommand> = VoiceCommand::class.sealedSubclasses
-        .map { it.createInstance() }
+        .map { it.objectInstance ?: it.createInstance() }
 
     fun fromRequestUri(command: String): VoiceCommand? {
-        return knownCommands
-            .filter { it.matches(command) }
-            .firstOrNull()
+        return knownCommands.firstOrNull { it.matches(command) }
     }
 }

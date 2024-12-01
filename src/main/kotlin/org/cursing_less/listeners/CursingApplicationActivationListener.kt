@@ -26,15 +26,14 @@ import kotlin.Exception
 
 internal class CursingApplicationActivationListener : ApplicationActivationListener {
 
-    var caretListener: CursingCaretListener? = null
-    var cursingDeletionListener: CursingDeletionListener? = null
-    var cursingVisibleAreaListener: CursingVisibleAreaListener? = null
+    private var caretListener: CursingCaretListener? = null
+    private var cursingVisibleAreaListener: CursingVisibleAreaListener? = null
 
     private var pathToNonce: Path? = null
     private var server: HttpServer? = null
 
     companion object {
-        val DEFAULT_PORT: Int = 8652
+        const val DEFAULT_PORT: Int = 8652
         val PLATFORM_TO_PORT: Map<String, Int> = mapOf(
             PlatformUtils.IDEA_PREFIX to 8653,
             PlatformUtils.IDEA_CE_PREFIX to 8654,
@@ -61,9 +60,6 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
             cursingVisibleAreaListener = CursingVisibleAreaListener()
             eventMulticaster.addVisibleAreaListener(cursingVisibleAreaListener!!, DoNothingDisposable())
 
-            cursingDeletionListener = CursingDeletionListener()
-            eventMulticaster.addDocumentListener(cursingDeletionListener!!, DoNothingDisposable())
-
             VoiceCommand::class.sealedSubclasses
                 .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
         }
@@ -75,7 +71,7 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
         shutdownServer()
     }
 
-    fun cleanupListeners() {
+    private fun cleanupListeners() {
         if (caretListener != null) {
             EditorFactory.getInstance().eventMulticaster.removeCaretListener(caretListener!!)
             caretListener = null
@@ -85,15 +81,9 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
             EditorFactory.getInstance().eventMulticaster.removeVisibleAreaListener(cursingVisibleAreaListener!!)
             cursingVisibleAreaListener = null
         }
-
-        if (cursingDeletionListener != null) {
-            EditorFactory.getInstance().eventMulticaster.removeDocumentListener(cursingDeletionListener!!)
-            cursingDeletionListener = null
-        }
     }
 
-    class DoNothingDisposable : Disposable.Default {
-    }
+    class DoNothingDisposable : Disposable.Default
 
     private fun startupServer(): Boolean {
         try {
@@ -117,12 +107,12 @@ internal class CursingApplicationActivationListener : ApplicationActivationListe
             server?.executor = null // creates a default executor
             server?.start()
 
-            return true;
+            return true
         } catch (e: Exception) {
             notifyStartupFailure(e)
             thisLogger().error("Failed to start server to listen for commands", e)
         }
-        return false;
+        return false
     }
 
     private fun shutdownServer() {

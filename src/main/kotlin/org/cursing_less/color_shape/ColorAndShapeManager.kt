@@ -21,20 +21,24 @@ class ColorAndShapeManager(
     private var state: MutableMap<Char, FreeCursingColorShape> = HashMap()
 
     companion object {
-        private val NAME = "CURSING_COLOR_AND_SHAPE_MANAGER"
-        val KEY = Key.create<ColorAndShapeManager>(NAME);
+        private const val NAME = "CURSING_COLOR_AND_SHAPE_MANAGER"
+        val KEY = Key.create<ColorAndShapeManager>(NAME)
+    }
+
+    fun consumedAtOffset(offset: Int): Pair<Char, CursingCodedColorShape>? {
+        return consumed[offset]
     }
 
     fun consume(character: Char, offset: Int): CursingCodedColorShape? {
-        val existing = state.computeIfAbsent(character, { FreeCursingColorShape(generatePermutations()) })
+        val existing = state.computeIfAbsent(character) { FreeCursingColorShape(generatePermutations()) }
         val preference = offsetPreference[offset]
         val consumedThing = existing.consumeGivenOrRandomFree(preference)
         if (consumedThing != null) {
             // thisLogger().trace("Consumed ${consumedThing} at ${offset} for ${character}")
-            consumed.put(offset, Pair(character, consumedThing))
-            offsetPreference.put(offset, consumedThing)
+            consumed[offset] = Pair(character, consumedThing)
+            offsetPreference[offset] = consumedThing
         } else {
-            thisLogger().debug("Failed to consume anythiing at ${offset} for ${character}")
+            thisLogger().debug("Failed to consume anything at ${offset} for ${character}")
         }
         return consumedThing
     }
@@ -48,7 +52,7 @@ class ColorAndShapeManager(
         val freed = consumed.remove(offset)
         if (freed != null) {
             thisLogger().trace("Freed ${freed} at ${offset}")
-            var existing = state.get(freed.first)
+            val existing = state[freed.first]
             if (existing != null) {
                 existing.returnFreed(freed.second)
             } else {

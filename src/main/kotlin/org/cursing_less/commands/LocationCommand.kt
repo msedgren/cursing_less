@@ -3,7 +3,7 @@ package org.cursing_less.commands
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 
-class LocationCommand : VoiceCommand {
+data object LocationCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "location"
 
