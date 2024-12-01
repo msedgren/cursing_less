@@ -6,7 +6,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 
-class CloneLineCommand : VoiceCommand {
+data object CloneLineCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "clone"
 

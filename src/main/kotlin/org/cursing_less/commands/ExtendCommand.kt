@@ -9,7 +9,7 @@ import com.intellij.openapi.wm.IdeFocusManager
 import kotlin.math.max
 import kotlin.math.min
 
-class ExtendCommand : VoiceCommand {
+data object ExtendCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "extend"
 
