@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.playback.commands.ActionCommand
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowManager
+import java.awt.datatransfer.StringSelection
 
 data object ActionCommand : VoiceCommand {
 
@@ -16,14 +17,34 @@ data object ActionCommand : VoiceCommand {
 
     override fun run(commandParameters: List<String>, project: Project, editor: Editor): String {
         val actionId = commandParameters[0]
+        val selectionModel = editor.selectionModel
+
+        // If we are attempting to perform an editor copy and we have no selection then we should make
+        // sure to clear the clipboard instead. This is to prevent a bug that causes intellij to do interesting
+        // things when we try to perform an editor copy without anything selected
+        if (actionId == "EditorCopy" && !selectionModel.hasSelection()) {
+                clearClipboard()
+                return "OK"
+        }
+
         ApplicationManager.getApplication().invokeAndWait {
-            val action = ActionManager.getInstance().getAction(actionId)
-            val event = ActionCommand.getInputEvent(actionId)
-            val toolWindow = pullToolWindow(project)
-            val component = toolWindow?.component
-            ActionManager.getInstance().tryToExecute(action, event, component, null, true)
+            executeAction(project, actionId)
         }
         return "OK"
+    }
+
+    private fun clearClipboard() {
+        val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+        val transferable = StringSelection("")
+        clipboard.setContents(transferable, transferable)
+    }
+
+    private fun executeAction(project: Project, actionId: String) {
+        val action = ActionManager.getInstance().getAction(actionId)
+        val event = ActionCommand.getInputEvent(actionId)
+        val toolWindow = pullToolWindow(project)
+        val component = toolWindow?.component
+        ActionManager.getInstance().tryToExecute(action, event, component, null, true)
     }
 
     private fun pullToolWindow(project: Project): ToolWindow? {

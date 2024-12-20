@@ -57,13 +57,13 @@ class CursingMarkupService {
                             existingInlays.remove(offset)
                             existing.first.repaint()
                         } else {
-                            thisLogger().trace("Showing ${cursingColorShape} at ${offset}")
+                            //thisLogger().trace("Showing ${cursingColorShape} at ${offset}")
                             addColoredShapeAboveToken(editor, cursingColorShape, offset)
                         }
                     }
 
                 existingInlays.forEach { (_, pair) ->
-                    thisLogger().trace("Removing ${pair.second} at ${pair.first.offset}")
+                    // thisLogger().trace("Removing ${pair.second} at ${pair.first.offset}")
                     pair.first.dispose()
                 }
             }
