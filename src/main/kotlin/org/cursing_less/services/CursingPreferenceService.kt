@@ -24,7 +24,8 @@ class CursingPreferenceService {
         CursingShape.Square(),
         CursingShape.Slash(),
         CursingShape.BackSlash(),
-        CursingShape.Line()
+        CursingShape.Line(),
+        CursingShape.X()
     )
 
     val codedColors = colors.withIndex().map { CursingCoded("color_${it.index}", it.value) }

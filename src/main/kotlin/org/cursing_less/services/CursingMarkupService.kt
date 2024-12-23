@@ -1,7 +1,6 @@
 package org.cursing_less.services
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.*
@@ -37,35 +36,39 @@ class CursingMarkupService {
     }
 
     fun updateHighlightedTokens(editor: Editor, cursorOffset: Int) {
-        debouncer.debounce { updateHighlightedTokensNow(editor, cursorOffset) }
+        debouncer.debounce {
+            updateHighlightedTokensNow(editor, cursorOffset)
+        }
     }
 
     private fun updateHighlightedTokensNow(editor: Editor, cursorOffset: Int) {
         val project = editor.project
-        if (project != null && !editor.isDisposed) {
+        if (project != null && !project.isDisposed && project.isInitialized && !editor.isDisposed) {
             val colorAndShapeManager = pullColorAndShapeManager(editor, project)
             colorAndShapeManager.freeAll()
             val existingInlays = pullExistingInlaysByOffset(editor)
 
             val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
             if (file != null) {
-                findTokensBasedOffOffset(editor, file, cursorOffset, colorAndShapeManager)
-                    .forEach { (offset, cursingColorShape) ->
+                val tokens = findTokensBasedOffOffset(editor, file, cursorOffset, colorAndShapeManager)
+                editor.inlayModel.execute(false) {
+                    tokens.forEach { (offset, cursingColorShape) ->
                         val existing = existingInlays[offset]
                         if (existing?.second == cursingColorShape) {
                             // thisLogger().trace("Already showing ${cursingColorShape} at ${offset}")
-                            existingInlays.remove(offset)
-                            existing.first.repaint()
+                            existingInlays.remove(offset)?.first?.repaint()
                         } else {
                             //thisLogger().trace("Showing ${cursingColorShape} at ${offset}")
                             addColoredShapeAboveToken(editor, cursingColorShape, offset)
                         }
                     }
 
-                existingInlays.forEach { (_, pair) ->
-                    // thisLogger().trace("Removing ${pair.second} at ${pair.first.offset}")
-                    pair.first.dispose()
+                    existingInlays.forEach { (_, pair) ->
+                        //  thisLogger().trace("Removing ${pair.second} at ${pair.first.offset}")
+                        pair.first.dispose()
+                    }
                 }
+                editor.contentComponent.repaint()
             }
         }
     }
@@ -160,7 +163,7 @@ class CursingMarkupService {
 
     private fun isAnyPartVisible(editor: Editor, element: PsiElement): Boolean {
         val visibleArea = editor.calculateVisibleRange()
-        return visibleArea.contains(element.startOffset) || visibleArea.contains(element.endOffset)
+        return visibleArea.intersects(element.textRange)
     }
 
     private fun addColoredShapeAboveToken(
@@ -177,7 +180,7 @@ class CursingMarkupService {
         private val cursingCodedColorShape: CursingCodedColorShape
     ) : EditorCustomElementRenderer {
         override fun calcWidthInPixels(inlay: Inlay<*>): Int {
-            return cursingCodedColorShape.shape.value.calcWidthInPixels(inlay)
+            return 1
         }
 
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
@@ -194,7 +197,9 @@ class CursingMarkupService {
 
             val task = object : Update("cursing_less_markup") {
                 override fun run() {
-                    ApplicationManager.getApplication().invokeLater(func)
+                    ApplicationManager.getApplication().invokeLater {
+                        ApplicationManager.getApplication().runWriteAction(func)
+                    }
                 }
             }
             updateQueue.queue(task)
