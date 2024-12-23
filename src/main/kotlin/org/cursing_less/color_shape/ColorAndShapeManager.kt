@@ -38,7 +38,7 @@ class ColorAndShapeManager(
             consumed[offset] = Pair(character, consumedThing)
             offsetPreference[offset] = consumedThing
         } else {
-            thisLogger().debug("Failed to consume anything at ${offset} for ${character}")
+            // thisLogger().debug("Failed to consume anything at ${offset} for ${character}")
         }
         return consumedThing
     }

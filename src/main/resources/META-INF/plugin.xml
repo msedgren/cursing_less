@@ -9,12 +9,19 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <applicationListeners>
-        <listener class="org.cursing_less.listeners.CursingApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+        <listener class="org.cursing_less.listeners.CursingApplicationListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
     </applicationListeners>
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup id="cursing_less"
                            displayType="BALLOON"
                            key="cursing_less.notification.group.name"/>
+        <postStartupActivity implementation="org.cursing_less.listeners.CursingApplicationListener$StartupActivity"/>
+
+        <editorActionHandler action="EditorDelete" implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
+        <editorActionHandler action="EditorBackSpace"
+                             implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
+        <editorFactoryListener implementation="org.cursing_less.listeners.CursingEditorListener" />
     </extensions>
 </idea-plugin>
