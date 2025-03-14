@@ -32,4 +32,10 @@ class CursingCaretListener : CaretListener {
             }
         }
     }
+
+    override fun caretAdded(event: CaretEvent) {
+        val cursingMarkupService =
+            ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateHighlightedTokens(event.editor, event.caret?.offset ?: 0)
+    }
 }

@@ -4,7 +4,7 @@ import com.intellij.openapi.components.Service
 import org.cursing_less.commands.VoiceCommand
 import kotlin.reflect.full.createInstance
 
-@Service(Service.Level.PROJECT)
+@Service(Service.Level.APP)
 class VoiceCommandParserService {
 
     private val knownCommands: List<VoiceCommand> = VoiceCommand::class.sealedSubclasses

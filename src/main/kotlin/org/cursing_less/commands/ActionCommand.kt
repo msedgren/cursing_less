@@ -15,21 +15,16 @@ data object ActionCommand : VoiceCommand {
     override fun matches(command: String) = command == "action"
 
 
-    override fun run(commandParameters: List<String>, project: Project, editor: Editor): String {
+    override fun run(commandParameters: List<String>, project: Project, editor: Editor?): String {
         val actionId = commandParameters[0]
-        val selectionModel = editor.selectionModel
+        val selectionModel = editor?.selectionModel
 
-        // If we are attempting to perform an editor copy and we have no selection then we should make
-        // sure to clear the clipboard instead. This is to prevent a bug that causes intellij to do interesting
-        // things when we try to perform an editor copy without anything selected
-        if (actionId == "EditorCopy" && !selectionModel.hasSelection()) {
-                clearClipboard()
-                return "OK"
+        // If we are attempting to perform an editor copy and we have no selection then we do nothing
+        if (actionId == "EditorCopy" && selectionModel != null && !selectionModel.hasSelection()) {
+            return "OK"
         }
 
-        ApplicationManager.getApplication().invokeAndWait {
-            executeAction(project, actionId)
-        }
+        executeAction(project, actionId)
         return "OK"
     }
 
@@ -50,9 +45,6 @@ data object ActionCommand : VoiceCommand {
     private fun pullToolWindow(project: Project): ToolWindow? {
         val twm = ToolWindowManager.getInstance(project)
         val tw = twm.getToolWindow(twm.activeToolWindowId)
-        if (tw == null) {
-            thisLogger().debug("No selected tool window")
-        }
         return tw
     }
 

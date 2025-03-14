@@ -1,7 +1,6 @@
 package org.cursing_less.services
 
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.ui.JBColor
 import org.cursing_less.color_shape.CursingCoded
 import org.cursing_less.color_shape.CursingColor
@@ -30,9 +29,4 @@ class CursingPreferenceService {
 
     val codedColors = colors.withIndex().map { CursingCoded("color_${it.index}", it.value) }
     val codedShapes = shapes.withIndex().map { CursingCoded("shape_${it.index}", it.value) }
-
-
-    init {
-        thisLogger().info("Initialized CursingPreferenceService")
-    }
 }

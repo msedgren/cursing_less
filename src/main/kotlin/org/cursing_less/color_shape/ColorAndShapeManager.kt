@@ -3,6 +3,7 @@ package org.cursing_less.color_shape
 import com.intellij.openapi.diagnostic.thisLogger
 import java.util.stream.Collectors
 import com.intellij.openapi.util.Key
+import com.jetbrains.rd.util.firstOrNull
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -34,11 +35,9 @@ class ColorAndShapeManager(
         val preference = offsetPreference[offset]
         val consumedThing = existing.consumeGivenOrRandomFree(preference)
         if (consumedThing != null) {
-            // thisLogger().trace("Consumed ${consumedThing} at ${offset} for ${character}")
             consumed[offset] = Pair(character, consumedThing)
             offsetPreference[offset] = consumedThing
         } else {
-            // thisLogger().debug("Failed to consume anything at ${offset} for ${character}")
         }
         return consumedThing
     }
@@ -51,7 +50,6 @@ class ColorAndShapeManager(
     fun free(offset: Int) {
         val freed = consumed.remove(offset)
         if (freed != null) {
-            thisLogger().trace("Freed ${freed} at ${offset}")
             val existing = state[freed.first]
             if (existing != null) {
                 existing.returnFreed(freed.second)
@@ -61,6 +59,12 @@ class ColorAndShapeManager(
         } else {
             thisLogger().error("unable to free element at offset ${offset}!")
         }
+    }
+
+    fun find(color: CursingColor, shape: CursingShape): Int? {
+        return consumed.filter {
+            it.value.second.color.value == color && it.value.second.shape.value == shape
+        }.firstOrNull()?.key
     }
 
     private fun generatePermutations(): MutableList<CursingCodedColorShape> {

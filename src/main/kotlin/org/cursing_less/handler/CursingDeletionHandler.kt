@@ -14,11 +14,9 @@ class CursingDeletionHandler(private val originalHandler: EditorActionHandler) :
         ApplicationManager.getApplication().runReadAction {
             val offset = caret?.offset
             if (offset != null && offset > 0) {
-                thisLogger().info("delete or backspace!")
                 editor.inlayModel.getInlineElementsInRange(caret.offset - 1, caret.offset).forEach {
                     val cursingData = it?.getUserData(INLAY_KEY)
                     if (cursingData != null) {
-                        thisLogger().trace("Disposing of inlay at ${offset}")
                         ApplicationManager.getApplication().runWriteAction {
                             editor.inlayModel.execute(false) {
                                 it.dispose()

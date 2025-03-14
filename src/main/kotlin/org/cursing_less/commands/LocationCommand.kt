@@ -7,8 +7,12 @@ data object LocationCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "location"
 
-    override fun run(commandParameters: List<String>, project: Project, editor: Editor): String {
-        val logicalPosition = editor.caretModel.logicalPosition
-        return String.format("%d %d", logicalPosition.line + 1, logicalPosition.column + 1)
+    override fun run(commandParameters: List<String>, project: Project, editor: Editor?): String {
+        if(editor != null) {
+            val logicalPosition = editor.caretModel.logicalPosition
+            return String.format("%d %d", logicalPosition.line + 1, logicalPosition.column + 1)
+        } else {
+            return "0 0"
+        }
     }
 }

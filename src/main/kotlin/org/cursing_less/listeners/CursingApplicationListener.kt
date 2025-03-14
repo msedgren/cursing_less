@@ -5,17 +5,24 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.actionSystem.EditorActionManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.PlatformUtils
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.cursing_less.MyBundle
 import org.cursing_less.commands.VoiceCommand
 import org.cursing_less.handler.CursingDeletionHandler
 import org.cursing_less.server.RequestHandler
+import org.cursing_less.services.CursingMarkupService
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -50,6 +57,7 @@ class CursingApplicationListener() : AppLifecycleListener {
     }
 
     override fun appWillBeClosed(isRestart: Boolean) {
+        thisLogger().info("shutting down cursing_less plugin")
         handler.shutdown()
     }
 
@@ -60,31 +68,39 @@ class CursingApplicationListener() : AppLifecycleListener {
     }
 
     class StartupHandler {
-        private var caretListener: CursingCaretListener? = null
-        private var cursingVisibleAreaListener: CursingVisibleAreaListener? = null
-
         private var pathToNonce: Path? = null
         private var server: HttpServer? = null
 
         var initialized = false;
 
+        companion object {
+            val mutex = Object()
+        }
+
         fun startup() {
-            if (!initialized) {
-                thisLogger().info("app started initializing cursing_less plugin")
-                startupServer()
+            synchronized(mutex) {
+                if (!initialized) {
+                    thisLogger().info("app started initializing cursing_less plugin")
+                    if (startupServer()) {
+                        setupListeners()
+                        setupDeleteHandlers()
 
-                val eventMulticaster = EditorFactory.getInstance().eventMulticaster
+                        VoiceCommand::class.sealedSubclasses
+                            .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
 
-                eventMulticaster.addCaretListener(CursingCaretListener(), DoNothingDisposable())
-                eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(), DoNothingDisposable())
 
-                setupDeleteHandlers()
-
-                VoiceCommand::class.sealedSubclasses
-                    .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
-
-                initialized = true
+                        initialized = true
+                    }
+                }
             }
+
+        }
+
+        private fun setupListeners() {
+            val eventMulticaster = EditorFactory.getInstance().eventMulticaster
+
+            eventMulticaster.addCaretListener(CursingCaretListener(), DoNothingDisposable())
+            eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(), DoNothingDisposable())
         }
 
         private fun setupDeleteHandlers() {
@@ -96,13 +112,13 @@ class CursingApplicationListener() : AppLifecycleListener {
         }
 
 
-
         fun shutdown() {
-            try {
-                thisLogger().info("cleaning up listeners and shutting down server...")
-                shutdownServer()
-            } finally {
-                initialized = false;
+            synchronized(mutex) {
+                try {
+                    shutdownServer()
+                } finally {
+                    initialized = false;
+                }
             }
         }
 
@@ -128,9 +144,8 @@ class CursingApplicationListener() : AppLifecycleListener {
                 val loopbackSocket = InetSocketAddress(InetAddress.getLoopbackAddress(), port)
                 server = HttpServer.create(loopbackSocket, -1)
                 server?.createContext("/$nonce", RequestHandler())
-                server?.executor = null // creates a default executor
+                server?.executor = null
                 server?.start()
-
                 return true
             } catch (e: Exception) {
                 notifyStartupFailure(e)

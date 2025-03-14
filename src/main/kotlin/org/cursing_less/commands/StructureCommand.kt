@@ -15,54 +15,54 @@ data object StructureCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "psi"
 
-    override fun run(commandParameters: List<String>, project: Project, editor: Editor): String {
-        val cursorMovement = commandParameters[0]
-        val rawClasses = commandParameters.subList(1, commandParameters.size).joinToString(separator = " ").split(",")
-        val startNavType = rawClasses[0]
-        val classes = rawClasses.subList(1, rawClasses.size)
+    override fun run(commandParameters: List<String>, project: Project, editor: Editor?): String {
+        if(editor != null) {
+            val cursorMovement = commandParameters[0]
+            val rawClasses =
+                commandParameters.subList(1, commandParameters.size).joinToString(separator = " ").split(",")
+            val startNavType = rawClasses[0]
+            val classes = rawClasses.subList(1, rawClasses.size)
 
-        thisLogger().debug("psi $cursorMovement  $startNavType  ${classes.joinToString(" ")}")
+            ApplicationManager.getApplication().invokeAndWait {
+                val psiFile = pullPsiFile(project, editor)
+                if (psiFile != null) {
+                    val startingOffset = editor.caretModel.offset
+                    var currentElement: PsiElement? = PsiUtilBase.getElementAtOffset(psiFile, startingOffset)
+                    printHierarchy(currentElement)
+                    currentElement = parentElementOfNavType(currentElement, startNavType)
 
-        ApplicationManager.getApplication().invokeAndWait {
-            val psiFile = pullPsiFile(project, editor)
-            if (psiFile != null) {
-                val startingOffset = editor.caretModel.offset
-                var currentElement: PsiElement? = PsiUtilBase.getElementAtOffset(psiFile, startingOffset)
-                printHierarchy(currentElement)
-                currentElement = parentElementOfNavType(currentElement, startNavType)
-                thisLogger().debug("Containing element? " + (currentElement != null))
-
-                if (currentElement == null) {
-                    return@invokeAndWait
-                }
-
-                for (clazz in classes) {
-                    currentElement = childElementOfNavType(currentElement, clazz, startingOffset)
-                    thisLogger().debug("Next element(" + clazz + ") found? " + (currentElement != null))
                     if (currentElement == null) {
                         return@invokeAndWait
                     }
-                }
 
-                // CurrentElement is where we want to go
-                val result = currentElement!!.textRange
-                when (cursorMovement) {
-                    "start" -> {
-                        editor.caretModel.moveToOffset(result.startOffset)
+                    for (clazz in classes) {
+                        currentElement = childElementOfNavType(currentElement, clazz, startingOffset)
+                        if (currentElement == null) {
+                            return@invokeAndWait
+                        }
                     }
-                    "end" -> {
-                        editor.caretModel.moveToOffset(result.endOffset)
+
+                    // CurrentElement is where we want to go
+                    val result = currentElement!!.textRange
+                    when (cursorMovement) {
+                        "start" -> {
+                            editor.caretModel.moveToOffset(result.startOffset)
+                        }
+
+                        "end" -> {
+                            editor.caretModel.moveToOffset(result.endOffset)
+                        }
+
+                        else -> {
+                            editor.caretModel.moveToOffset(result.startOffset)
+                            editor.selectionModel.setSelection(result.startOffset, result.endOffset)
+                        }
                     }
-                    else -> {
-                        editor.caretModel.moveToOffset(result.startOffset)
-                        editor.selectionModel.setSelection(result.startOffset, result.endOffset)
-                    }
+                    editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
+                    IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
                 }
-                editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
-                IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
             }
         }
-
         return "OK"
     }
 

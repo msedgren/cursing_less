@@ -13,16 +13,13 @@ import javax.swing.plaf.basic.BasicSliderUI.ScrollListener
 class CursingVisibleAreaListener : VisibleAreaListener {
 
     override fun visibleAreaChanged(event: VisibleAreaEvent) {
+        val range = event.editor.calculateVisibleRange()
+        val difference = range.endOffset - range.startOffset
+        val cursorOffset = range.startOffset + difference / 2
 
-        if (event.oldRectangle != event.newRectangle) {
-            val range = event.editor.calculateVisibleRange()
-            val difference = range.endOffset - range.startOffset
-            val cursorOffset = range.startOffset + difference / 2
-
-            val cursingMarkupService =
-                ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-            cursingMarkupService.updateHighlightedTokens(event.editor, cursorOffset)
-        }
+        val cursingMarkupService =
+            ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateHighlightedTokens(event.editor, cursorOffset)
     }
 
 }
