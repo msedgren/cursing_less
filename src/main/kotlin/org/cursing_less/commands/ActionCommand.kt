@@ -1,9 +1,8 @@
 package org.cursing_less.commands
 
 import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.SelectionModel
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.playback.commands.ActionCommand
 import com.intellij.openapi.wm.ToolWindow
@@ -20,13 +19,14 @@ data object ActionCommand : VoiceCommand {
         val selectionModel = editor?.selectionModel
 
         // If we are attempting to perform an editor copy and we have no selection then we do nothing
-        if (actionId == "EditorCopy" && selectionModel != null && !selectionModel.hasSelection()) {
-            return "OK"
+        if (runAction(actionId, selectionModel)) {
+            executeAction(project, actionId)
         }
-
-        executeAction(project, actionId)
         return "OK"
     }
+
+    private fun runAction(actionId: String, selectionModel: SelectionModel?) =
+        actionId != "EditorCopy" || selectionModel == null || selectionModel.hasSelection()
 
     private fun clearClipboard() {
         val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
@@ -37,12 +37,15 @@ data object ActionCommand : VoiceCommand {
     private fun executeAction(project: Project, actionId: String) {
         val action = ActionManager.getInstance().getAction(actionId)
         val event = ActionCommand.getInputEvent(actionId)
-        val toolWindow = pullToolWindow(project)
-        val component = toolWindow?.component
-        ActionManager.getInstance().tryToExecute(action, event, component, null, true)
+        if (action != null && event != null) {
+            val toolWindow = pullToolWindow(project)
+            val component = toolWindow?.component
+            ActionManager.getInstance().tryToExecute(action, event, component, null, true)
+        }
     }
 
     private fun pullToolWindow(project: Project): ToolWindow? {
+        //TODO toolwindowmanager lock.
         val twm = ToolWindowManager.getInstance(project)
         val tw = twm.getToolWindow(twm.activeToolWindowId)
         return tw

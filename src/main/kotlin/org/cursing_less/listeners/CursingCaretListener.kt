@@ -13,29 +13,27 @@ class CursingCaretListener : CaretListener {
         val caret = event.caret
         var editor = event.editor
         if (editor.getUserData(ColorAndShapeManager.KEY) != null && caret != null) {
-            ApplicationManager.getApplication().runReadAction {
-                val cursorOffset = caret.offset
-                if (event.newPosition.line == event.oldPosition.line && event.newPosition.column == event.oldPosition.column) {
-                    val move = if (event.newPosition.leansForward) 1 else -1
-                    val inlay =
-                        event.editor.inlayModel.getInlineElementsInRange(caret.offset, caret.offset).firstOrNull()
-                    val cursingData = inlay?.getUserData(INLAY_KEY)
-                    if (cursingData != null) {
-                        ApplicationManager.getApplication().runWriteAction {
-                            event.editor.caretModel.moveCaretRelatively(move, 0, true, false, false)
-                        }
+            val cursorOffset = caret.offset
+            if (event.newPosition.line == event.oldPosition.line && event.newPosition.column == event.oldPosition.column) {
+                val move = if (event.newPosition.leansForward) 1 else -1
+                val inlay =
+                    event.editor.inlayModel.getInlineElementsInRange(caret.offset, caret.offset).firstOrNull()
+                val cursingData = inlay?.getUserData(INLAY_KEY)
+                if (cursingData != null) {
+                    ApplicationManager.getApplication().invokeLater {
+                        event.editor.caretModel.moveCaretRelatively(move, 0, true, false, false)
                     }
                 }
-                val cursingMarkupService =
-                    ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-                cursingMarkupService.updateHighlightedTokens(event.editor, cursorOffset)
             }
+            val cursingMarkupService =
+                ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+            cursingMarkupService.updateCursingTokens(event.editor, cursorOffset)
         }
     }
 
     override fun caretAdded(event: CaretEvent) {
         val cursingMarkupService =
             ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-        cursingMarkupService.updateHighlightedTokens(event.editor, event.caret?.offset ?: 0)
+        cursingMarkupService.updateCursingTokens(event.editor, event.caret?.offset ?: 0)
     }
 }

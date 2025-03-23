@@ -2,7 +2,6 @@ package org.cursing_less.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.ui.JBColor
-import org.cursing_less.color_shape.CursingCoded
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
 import java.awt.Color
@@ -10,7 +9,7 @@ import java.awt.Color
 @Service(Service.Level.PROJECT)
 class CursingPreferenceService {
 
-    private val colors = listOf(
+    val colors = listOf(
         CursingColor("red", JBColor.RED),
         CursingColor("blue", JBColor.BLUE),
         CursingColor("green", JBColor.GREEN),
@@ -18,7 +17,7 @@ class CursingPreferenceService {
         CursingColor("purple", JBColor(Color(191, 64, 191), Color(218, 112, 214)))
     )
 
-    private val shapes = listOf(
+    val shapes = listOf(
         CursingShape.Circle(),
         CursingShape.Square(),
         CursingShape.Slash(),
@@ -27,6 +26,9 @@ class CursingPreferenceService {
         CursingShape.X()
     )
 
-    val codedColors = colors.withIndex().map { CursingCoded("color_${it.index}", it.value) }
-    val codedShapes = shapes.withIndex().map { CursingCoded("shape_${it.index}", it.value) }
+    val codedColors = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }
+    val codedShapes = shapes.withIndex().associateTo(mutableMapOf()) { Pair(encodeToShape(it.index + 1), it.value) }
+
+    fun encodeToColor(given: Int) = "color_$given"
+    fun encodeToShape(given: Int) = "shape_$given"
 }

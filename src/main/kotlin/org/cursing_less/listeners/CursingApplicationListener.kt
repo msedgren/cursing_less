@@ -10,14 +10,10 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.actionSystem.EditorActionManager
-import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.PlatformUtils
 import com.sun.net.httpserver.HttpServer
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.cursing_less.MyBundle
 import org.cursing_less.commands.VoiceCommand
 import org.cursing_less.handler.CursingDeletionHandler
@@ -85,6 +81,17 @@ class CursingApplicationListener() : AppLifecycleListener {
                         setupListeners()
                         setupDeleteHandlers()
 
+                        ApplicationManager.getApplication().invokeLater({
+                            ApplicationManager.getApplication().runWriteAction {
+                                val cursingMarkupService =
+                                    ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+                                EditorFactory.getInstance().allEditors.forEach { editor ->
+                                    cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
+                                }
+                            }
+                        }, ModalityState.any())
+
+
                         VoiceCommand::class.sealedSubclasses
                             .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
 
@@ -101,6 +108,7 @@ class CursingApplicationListener() : AppLifecycleListener {
 
             eventMulticaster.addCaretListener(CursingCaretListener(), DoNothingDisposable())
             eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(), DoNothingDisposable())
+            eventMulticaster.addDocumentListener(CursingDocumentChangedListener(), DoNothingDisposable())
         }
 
         private fun setupDeleteHandlers() {

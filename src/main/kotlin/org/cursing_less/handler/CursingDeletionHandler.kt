@@ -8,21 +8,20 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler
 import org.cursing_less.services.CursingMarkupService.Companion.INLAY_KEY
 
-class CursingDeletionHandler(private val originalHandler: EditorActionHandler) : EditorActionHandler(originalHandler.runForAllCarets())  {
+class CursingDeletionHandler(private val originalHandler: EditorActionHandler) :
+    EditorActionHandler(originalHandler.runForAllCarets()) {
 
     override fun doExecute(editor: Editor, caret: Caret?, dataContext: DataContext?) {
-        ApplicationManager.getApplication().runReadAction {
-            val offset = caret?.offset
-            if (offset != null && offset > 0) {
-                editor.inlayModel.getInlineElementsInRange(caret.offset - 1, caret.offset).forEach {
-                    val cursingData = it?.getUserData(INLAY_KEY)
-                    if (cursingData != null) {
-                        ApplicationManager.getApplication().runWriteAction {
-                            editor.inlayModel.execute(false) {
-                                it.dispose()
-                            }
-                            editor.contentComponent.repaint()
+        val offset = caret?.offset
+        if (offset != null && offset > 0) {
+            editor.inlayModel.getInlineElementsInRange(caret.offset - 1, caret.offset).forEach {
+                val cursingData = it?.getUserData(INLAY_KEY)
+                if (cursingData != null) {
+                    ApplicationManager.getApplication().invokeLater {
+                        editor.inlayModel.execute(false) {
+                            it.dispose()
                         }
+                        editor.contentComponent.repaint()
                     }
                 }
             }

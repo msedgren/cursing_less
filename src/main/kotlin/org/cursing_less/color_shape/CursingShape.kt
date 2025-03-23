@@ -53,6 +53,7 @@ abstract class CursingShape(val name: String) {
     class Line: CursingShape("line") {
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
             g.drawLine(targetRegion.x + 1, targetRegion.y + 3, targetRegion.x + 6, targetRegion.y + 3)
+            g.drawLine(targetRegion.x + 1, targetRegion.y + 4, targetRegion.x + 6, targetRegion.y + 4)
         }
     }
 
