@@ -51,7 +51,7 @@ class ColorAndShapeManager(
     fun free(offset: Int) {
         val freed = consumed.remove(offset)
         if (freed != null) {
-            val previouslyConsumed = characterState[freed.characterConsumed]
+            val previouslyConsumed = characterState[freed.characterConsumed.lowercaseChar()]
             if (previouslyConsumed != null) {
                 previouslyConsumed.returnFreed(freed.colorShape)
             } else {
@@ -62,12 +62,12 @@ class ColorAndShapeManager(
         }
     }
 
-    fun find(colorShape: CursingColorShape, character: Char): Int? {
+    fun find(colorShape: CursingColorShape, character: Char): ConsumedData? {
         val lowerCaseCharacter = character.lowercaseChar()
         return consumed
             .filter { it.value.colorShape == colorShape && it.value.characterConsumed == lowerCaseCharacter }
             .firstOrNull()
-            ?.key
+            ?.value
     }
 
     private fun generatePermutations(): MutableList<CursingColorShape> {
@@ -77,7 +77,7 @@ class ColorAndShapeManager(
     data class ConsumedData(
         val character: Char,
         val colorShape: CursingColorShape,
-        val consumedOffset: Int,
+        val startOffset: Int,
         val endOffset: Int
     ) {
         val characterConsumed = character.lowercaseChar()

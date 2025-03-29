@@ -1,19 +1,22 @@
 package org.cursing_less.commands
 
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.IdeFocusManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.cursing_less.services.CommandService
 
 data object RangeCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "range"
 
-    override fun run(commandParameters: List<String>, project: Project, editor: Editor?): String {
+    override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         if(editor != null) {
-            ApplicationManager.getApplication().invokeAndWait {
+            withContext(Dispatchers.EDT) {
                 val startLine = commandParameters[0].toInt() - 1
                 val endLine = commandParameters[1].toInt() - 1
                 val selection = editor.selectionModel
@@ -26,6 +29,6 @@ data object RangeCommand : VoiceCommand {
                 IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
             }
         }
-        return "OK"
+        return CommandService.OkayResponse
     }
 }

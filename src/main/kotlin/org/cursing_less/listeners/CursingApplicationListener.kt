@@ -6,6 +6,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
@@ -14,11 +15,20 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.util.PlatformUtils
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import org.apache.http.HttpServerConnection
+import org.apache.http.protocol.HttpService
 import org.cursing_less.MyBundle
 import org.cursing_less.commands.VoiceCommand
 import org.cursing_less.handler.CursingDeletionHandler
 import org.cursing_less.server.RequestHandler
 import org.cursing_less.services.CursingMarkupService
+import org.cursing_less.services.ScopeService
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -27,9 +37,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.SecureRandom
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 
-class CursingApplicationListener() : AppLifecycleListener {
+class CursingApplicationListener : AppLifecycleListener {
 
 
     companion object {
@@ -67,48 +78,44 @@ class CursingApplicationListener() : AppLifecycleListener {
         private var pathToNonce: Path? = null
         private var server: HttpServer? = null
 
-        var initialized = false;
+        var initialized = AtomicBoolean(false);
 
-        companion object {
-            val mutex = Object()
-        }
+        suspend fun startup() {
+            if (!initialized.get()) {
+                thisLogger().info("app started initializing cursing_less plugin")
+                if (startupServer()) {
+                    setupListeners()
+                    setupDeleteHandlers()
 
-        fun startup() {
-            synchronized(mutex) {
-                if (!initialized) {
-                    thisLogger().info("app started initializing cursing_less plugin")
-                    if (startupServer()) {
-                        setupListeners()
-                        setupDeleteHandlers()
+                    val cursingMarkupService =
+                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
 
-                        ApplicationManager.getApplication().invokeLater({
-                            ApplicationManager.getApplication().runWriteAction {
-                                val cursingMarkupService =
-                                    ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-                                EditorFactory.getInstance().allEditors.forEach { editor ->
-                                    cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
-                                }
-                            }
-                        }, ModalityState.any())
-
-
-                        VoiceCommand::class.sealedSubclasses
-                            .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
-
-
-                        initialized = true
+                    withContext(Dispatchers.EDT) {
+                        EditorFactory.getInstance().allEditors.forEach { editor ->
+                            cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
+                        }
                     }
+
+
+                    VoiceCommand::class.sealedSubclasses
+                        .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
+
+
+                    initialized.set(true)
                 }
             }
-
         }
 
         private fun setupListeners() {
             val eventMulticaster = EditorFactory.getInstance().eventMulticaster
 
-            eventMulticaster.addCaretListener(CursingCaretListener(), DoNothingDisposable())
-            eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(), DoNothingDisposable())
-            eventMulticaster.addDocumentListener(CursingDocumentChangedListener(), DoNothingDisposable())
+            val scopeService =
+                ApplicationManager.getApplication().getService(ScopeService::class.java)
+
+            eventMulticaster.addCaretListener(CursingCaretListener(scopeService.coroutineScope), DoNothingDisposable())
+            eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(scopeService.coroutineScope), DoNothingDisposable())
+            eventMulticaster.addDocumentListener(CursingDocumentChangedListener(scopeService.coroutineScope), DoNothingDisposable())
+            eventMulticaster.addEditorMouseListener(CursingMouseListener(), DoNothingDisposable())
         }
 
         private fun setupDeleteHandlers() {
@@ -121,12 +128,10 @@ class CursingApplicationListener() : AppLifecycleListener {
 
 
         fun shutdown() {
-            synchronized(mutex) {
-                try {
-                    shutdownServer()
-                } finally {
-                    initialized = false;
-                }
+            try {
+                shutdownServer()
+            } finally {
+                initialized.set(false);
             }
         }
 

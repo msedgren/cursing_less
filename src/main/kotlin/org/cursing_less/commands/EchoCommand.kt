@@ -5,16 +5,21 @@ import com.intellij.openapi.project.Project
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.notification.Notification
+import com.intellij.openapi.application.ApplicationManager
+import org.cursing_less.services.CommandService
+import org.cursing_less.services.CursingMarkupService
+import org.cursing_less.services.CursingPreferenceService
 
 
 class EchoCommand : VoiceCommand {
 
-    override fun matches(command: String) = command == "echo"
+    override fun matches(command: String) = command == "toggle_echo"
 
-    override fun run(commandParameters: List<String>, project: Project, editor: Editor?): String {
-        val message = commandParameters.joinToString(" ")
-        val notification = Notification("cursing_less", "Echo Command", message, NotificationType.INFORMATION)
-        Notifications.Bus.notify(notification, project)
-        return "OK"
+    override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
+
+        val cursingPreferenceService =
+            ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
+        cursingPreferenceService.toggleEchoCommands()
+        return CommandService.OkayResponse
     }
 }

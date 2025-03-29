@@ -46,7 +46,7 @@ abstract class CursingShape(val name: String) {
 
     class BackSlash: CursingShape("back_slash") {
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.drawLine(targetRegion.x + 6, targetRegion.y, targetRegion.x + 1, targetRegion.y + 5)
+            g.drawLine(targetRegion.x + 6, targetRegion.y + 5, targetRegion.x + 1, targetRegion.y)
         }
     }
 

@@ -2,17 +2,18 @@ package org.cursing_less.commands
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import org.apache.http.HttpStatus
 
 data object LocationCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "location"
 
-    override fun run(commandParameters: List<String>, project: Project, editor: Editor?): String {
+    override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         if(editor != null) {
             val logicalPosition = editor.caretModel.logicalPosition
-            return String.format("%d %d", logicalPosition.line + 1, logicalPosition.column + 1)
+            return VoiceCommandResponse(HttpStatus.SC_OK, String.format("%d %d", logicalPosition.line + 1, logicalPosition.column + 1))
         } else {
-            return "0 0"
+            return VoiceCommandResponse(HttpStatus.SC_OK, "0 0")
         }
     }
 }
