@@ -9,11 +9,8 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.wm.IdeFocusManager
-import com.jetbrains.rd.framework.util.withContext
 import com.sun.net.httpserver.HttpExchange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +23,7 @@ import java.io.InputStreamReader
 import java.net.URLDecoder
 
 @Service(Service.Level.APP)
-class CommandService(private val coroutineScope: CoroutineScope) {
+class CursingCommandService(private val coroutineScope: CoroutineScope) {
 
     companion object {
         val OkayResponse = VoiceCommandResponse(HttpStatus.SC_OK, "OK")

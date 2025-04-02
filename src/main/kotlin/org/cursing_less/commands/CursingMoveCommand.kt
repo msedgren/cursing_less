@@ -7,11 +7,8 @@ import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.cursing_less.color_shape.ColorAndShapeManager
-import org.cursing_less.color_shape.CursingColorShape
-import org.cursing_less.services.CommandService
+import org.cursing_less.services.CursingCommandService
 import org.cursing_less.services.CursingLookupService
-import org.cursing_less.services.CursingPreferenceService
 
 class CursingMoveCommand : VoiceCommand {
 
@@ -22,11 +19,11 @@ class CursingMoveCommand : VoiceCommand {
             val cursingLookupService = ApplicationManager.getApplication()
                 .getService(CursingLookupService::class.java)
             val pre = commandParameters[0] == "pre"
-            val colorShape = cursingLookupService.lookup(commandParameters[1], commandParameters[2])
+            val colorShape = cursingLookupService.parseToColorShape(commandParameters[1], commandParameters[2])
             val character = commandParameters[3].firstOrNull()
             if (colorShape != null && character != null) {
                 withContext(Dispatchers.EDT) {
-                    val consumedData = cursingLookupService.lookup(colorShape, character, editor)
+                    val consumedData = cursingLookupService.parseToColorShape(colorShape, character, editor)
                     if (consumedData != null) {
                         val offset = if (pre) consumedData.startOffset else consumedData.endOffset
                         editor.caretModel.moveToOffset(offset)
@@ -35,6 +32,6 @@ class CursingMoveCommand : VoiceCommand {
                 }
             }
         }
-        return CommandService.OkayResponse
+        return CursingCommandService.OkayResponse
     }
 }

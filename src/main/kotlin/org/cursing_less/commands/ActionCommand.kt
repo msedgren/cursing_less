@@ -11,7 +11,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.cursing_less.services.CommandService
+import org.cursing_less.services.CursingCommandService
 import java.awt.datatransfer.StringSelection
 
 data object ActionCommand : VoiceCommand {
@@ -27,7 +27,7 @@ data object ActionCommand : VoiceCommand {
         if (execute) {
             executeAction(project, actionId)
         }
-        return CommandService.OkayResponse
+        return CursingCommandService.OkayResponse
     }
 
     private suspend fun actionShouldExecute(actionId: String, selectionModel: SelectionModel?): Boolean {

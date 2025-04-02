@@ -22,5 +22,6 @@
         <editorActionHandler action="EditorDelete" implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
         <editorActionHandler action="EditorBackSpace"
                              implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
+        <editorFactoryListener implementation="org.cursing_less.listeners.CursingEditorFactoryListener"/>
     </extensions>
 </idea-plugin>

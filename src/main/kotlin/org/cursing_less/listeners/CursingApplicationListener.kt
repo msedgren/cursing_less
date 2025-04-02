@@ -5,30 +5,26 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.actionSystem.EditorActionManager
+import com.intellij.openapi.editor.actionSystem.TypedAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.util.PlatformUtils
 import com.sun.net.httpserver.HttpServer
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.apache.http.HttpServerConnection
-import org.apache.http.protocol.HttpService
 import org.cursing_less.MyBundle
 import org.cursing_less.commands.VoiceCommand
-import org.cursing_less.handler.CursingDeletionHandler
+import org.cursing_less.handler.CursingEditorActionHandler
 import org.cursing_less.server.RequestHandler
 import org.cursing_less.services.CursingMarkupService
-import org.cursing_less.services.ScopeService
+import org.cursing_less.services.CursingScopeService
+import org.cursing_less.services.CursingUserInteraction
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -86,6 +82,22 @@ class CursingApplicationListener : AppLifecycleListener {
                 if (startupServer()) {
                     setupListeners()
                     setupDeleteHandlers()
+                    
+                    val actionManager = EditorActionManager.getInstance()
+                    // Left arrow
+                    val leftHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT)
+                    actionManager.setActionHandler(
+                        IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT,
+                        CursingEditorActionHandler(leftHandler, CursingUserInteraction.CursingUserDirection.LEFT)
+                    )
+
+                    // Right arrow
+                    val rightHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT)
+                    actionManager.setActionHandler(
+                        IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT,
+                        CursingEditorActionHandler(rightHandler, CursingUserInteraction.CursingUserDirection.RIGHT)
+                    )
+
 
                     val cursingMarkupService =
                         ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
@@ -109,21 +121,21 @@ class CursingApplicationListener : AppLifecycleListener {
         private fun setupListeners() {
             val eventMulticaster = EditorFactory.getInstance().eventMulticaster
 
-            val scopeService =
-                ApplicationManager.getApplication().getService(ScopeService::class.java)
+            val cursingScopeService =
+                ApplicationManager.getApplication().getService(CursingScopeService::class.java)
 
-            eventMulticaster.addCaretListener(CursingCaretListener(scopeService.coroutineScope), DoNothingDisposable())
-            eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(scopeService.coroutineScope), DoNothingDisposable())
-            eventMulticaster.addDocumentListener(CursingDocumentChangedListener(scopeService.coroutineScope), DoNothingDisposable())
+            eventMulticaster.addCaretListener(CursingCaretListener(cursingScopeService.coroutineScope), DoNothingDisposable())
+            eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(cursingScopeService.coroutineScope), DoNothingDisposable())
+            eventMulticaster.addDocumentListener(CursingDocumentChangedListener(cursingScopeService.coroutineScope), DoNothingDisposable())
             eventMulticaster.addEditorMouseListener(CursingMouseListener(), DoNothingDisposable())
         }
 
         private fun setupDeleteHandlers() {
-            val actionManager = EditorActionManager.getInstance()
+            /*val actionManager = EditorActionManager.getInstance()
             val originalBackSpaceHandler = actionManager.getActionHandler("EditorBackSpace")
             actionManager.setActionHandler("EditorBackSpace", CursingDeletionHandler(originalBackSpaceHandler))
             val originalDeleteHandler = actionManager.getActionHandler("EditorDelete")
-            actionManager.setActionHandler("EditorDelete", CursingDeletionHandler(originalDeleteHandler))
+            actionManager.setActionHandler("EditorDelete", CursingDeletionHandler(originalDeleteHandler))*/
         }
 
 

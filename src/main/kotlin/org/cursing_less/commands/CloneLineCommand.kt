@@ -5,7 +5,7 @@ import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import org.cursing_less.services.CommandService
+import org.cursing_less.services.CursingCommandService
 
 data object CloneLineCommand : VoiceCommand {
 
@@ -39,7 +39,7 @@ data object CloneLineCommand : VoiceCommand {
             }
         }
 
-        return CommandService.OkayResponse
+        return CursingCommandService.OkayResponse
     }
 
 }

@@ -8,7 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.IdeFocusManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.cursing_less.services.CommandService
+import org.cursing_less.services.CursingCommandService
 import kotlin.math.max
 import kotlin.math.min
 
@@ -36,6 +36,6 @@ data object ExtendCommand : VoiceCommand {
             }
         }
 
-        return CommandService.OkayResponse
+        return CursingCommandService.OkayResponse
     }
 }

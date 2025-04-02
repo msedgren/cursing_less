@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorCustomElementRenderer
 import com.intellij.openapi.editor.EditorFactory
@@ -43,7 +44,13 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
 
     companion object {
         private const val INLAY_NAME = "CURSING_INLAY"
+        private const val ID_KEY_NAME = "CURSING_EDITOR_ID"
+
         val INLAY_KEY = Key.create<CursingColorShape>(INLAY_NAME)
+        val ID_KEY = Key.create<Long>(ID_KEY_NAME)
+
+        private val idGenerator = AtomicLong(0)
+        private val mutex = Mutex()
     }
 
     suspend fun toggleEnabled() {
@@ -60,14 +67,16 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
 
 
     suspend fun updateCursingTokens(editor: Editor, cursorOffset: Int) {
-        debouncer.debounce("update", editor, suspend {
+        debouncer.debounce("update", createAndSetId(editor), suspend {
             updateCursingTokensNow(editor, cursorOffset)
         })
     }
 
-    private suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int) {
+    suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int) {
         val project = editor.project
         if (enabled.get() && project != null && !project.isDisposed && project.isInitialized && !editor.isDisposed) {
+            // thisLogger().trace("Updating cursing tokens for ${editor.editorKind.name} with ID ${createAndSetId(editor)}")
+
             val colorAndShapeManager = createAndSetColorAndShapeManager(editor)
             colorAndShapeManager.freeAll()
 
@@ -76,16 +85,20 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
             withContext(Dispatchers.EDT) {
                 val existingInlays = pullExistingInlaysByOffset(editor)
                 tokens.forEach { (offset, cursingColorShape) ->
-                    val existing = existingInlays[offset]
-                    if (existing?.second == cursingColorShape) {
-                        val inlay = existingInlays.remove(offset)?.first
-                        if (inlay?.isValid == true) {
-                            inlay.repaint()
+                    val allInlays = editor.inlayModel.getInlineElementsInRange(offset, offset)
+                    // if (offset != cursorOffset || allInlays.size < 2) {
+                        val existing = existingInlays[offset]
+                        if (existing?.second == cursingColorShape) {
+                            val inlay = existingInlays.remove(offset)?.first
+                            if (inlay?.isValid == true) {
+                                inlay.repaint()
+                            }
+                        } else {
+                            addColoredShapeAboveCursingToken(editor, cursingColorShape, offset)
                         }
-                    } else {
-                        addColoredShapeAboveCursingToken(editor, cursingColorShape, offset)
-                    }
+                    // }
                 }
+
 
                 existingInlays.forEach { (_, pair) ->
                     if (pair.first.isValid) {
@@ -99,7 +112,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
-        debouncer.debounce("remove", editor, suspend {
+        debouncer.debounce("remove", createAndSetId(editor), suspend {
             removeAllCursingTokensNow(editor)
         })
     }
@@ -140,11 +153,21 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
     }
 
 
-    private fun createAndSetColorAndShapeManager(editor: Editor): ColorAndShapeManager {
+    suspend fun createAndSetColorAndShapeManager(editor: Editor): ColorAndShapeManager {
         val cursingPreferenceService =
             ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
-        return editor.getOrCreateUserDataUnsafe(ColorAndShapeManager.KEY) {
-            ColorAndShapeManager(cursingPreferenceService.colors, cursingPreferenceService.shapes)
+        mutex.withLock {
+            return editor.getOrCreateUserDataUnsafe(ColorAndShapeManager.KEY) {
+                ColorAndShapeManager(cursingPreferenceService.colors, cursingPreferenceService.shapes)
+            }
+        }
+    }
+
+    suspend fun createAndSetId(editor: Editor): Long {
+        mutex.withLock {
+            return editor.getOrCreateUserDataUnsafe(ID_KEY) {
+                idGenerator.getAndIncrement()
+            }
         }
     }
 
@@ -160,16 +183,18 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
             val found = ArrayList<Pair<Int, CursingColorShape>>()
             if (file != null) {
                 var nextElement = findElementClosestToOffset(file, offset)
-                if(nextElement != null) {
+                if (nextElement != null) {
                     var previousElement = PsiTreeUtil.prevVisibleLeaf(nextElement)
                     var nextElementVisible = isAnyPartVisible(visibleArea, nextElement.textRange)
-                    var previousElementVisible = previousElement != null && isAnyPartVisible(visibleArea, previousElement.textRange)
+                    var previousElementVisible =
+                        previousElement != null && isAnyPartVisible(visibleArea, previousElement.textRange)
                     // An attempt to bubble out from the cursor.
                     while ((nextElementVisible || previousElementVisible)) {
                         if (nextElement != null && nextElementVisible) {
                             found.addAll(consumeIfVisible(nextElement, visibleArea, colorAndShapeManager))
                             nextElement = PsiTreeUtil.nextVisibleLeaf(nextElement)
-                            nextElementVisible = nextElement != null && isAnyPartVisible(visibleArea, nextElement.textRange)
+                            nextElementVisible =
+                                nextElement != null && isAnyPartVisible(visibleArea, nextElement.textRange)
                         } else {
                             nextElement = null
                             nextElementVisible = false
@@ -178,7 +203,8 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
                         if (previousElement != null && previousElementVisible) {
                             found.addAll(consumeIfVisible(previousElement, visibleArea, colorAndShapeManager))
                             previousElement = PsiTreeUtil.prevVisibleLeaf(previousElement)
-                            previousElementVisible = previousElement != null && isAnyPartVisible(visibleArea, previousElement.textRange)
+                            previousElementVisible =
+                                previousElement != null && isAnyPartVisible(visibleArea, previousElement.textRange)
                         } else {
                             previousElement = null
                             previousElementVisible = false
@@ -263,15 +289,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
         private val updateQueue = MergingUpdateQueue("cursing_less_debounce", delay, true, null)
 
         companion object {
-            private const val KEY_NAME = "CURSING_EDITOR_ID"
-            private val idGenerator = AtomicLong(0)
-            private val KEY = Key.create<Long>(KEY_NAME)
             private val mutex = Mutex()
         }
 
-        suspend fun debounce(operation: String, editor: Editor, function: suspend () -> Unit) {
-            val id = createAndSetId(editor)
-            val task = object : Update("${operation}_${id}") {
+        fun debounce(operation: String, editorId: Long, function: suspend () -> Unit) {
+            val task = object : Update("${operation}_${editorId}") {
                 override fun run() {
                     if (CursingApplicationListener.handler.initialized.get()) {
                         coroutineScope.launch {
@@ -283,14 +305,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
                 }
             }
             updateQueue.queue(task)
-        }
-
-        private suspend fun createAndSetId(editor: Editor): Long {
-            mutex.withLock {
-                return editor.getOrCreateUserDataUnsafe(KEY) {
-                    idGenerator.getAndIncrement()
-                }
-            }
         }
     }
 

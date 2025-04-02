@@ -1,5 +1,6 @@
 package org.cursing_less.color_shape
 
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.editor.markup.TextAttributes
 import java.awt.Graphics

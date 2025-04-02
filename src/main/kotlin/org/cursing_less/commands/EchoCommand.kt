@@ -2,12 +2,8 @@ package org.cursing_less.commands
 
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.notification.NotificationType
-import com.intellij.notification.Notifications
-import com.intellij.notification.Notification
 import com.intellij.openapi.application.ApplicationManager
-import org.cursing_less.services.CommandService
-import org.cursing_less.services.CursingMarkupService
+import org.cursing_less.services.CursingCommandService
 import org.cursing_less.services.CursingPreferenceService
 
 
@@ -20,6 +16,6 @@ class EchoCommand : VoiceCommand {
         val cursingPreferenceService =
             ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
         cursingPreferenceService.toggleEchoCommands()
-        return CommandService.OkayResponse
+        return CursingCommandService.OkayResponse
     }
 }

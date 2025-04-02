@@ -8,7 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.IdeFocusManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.cursing_less.services.CommandService
+import org.cursing_less.services.CursingCommandService
 import kotlin.math.max
 
 data object GotoCommand : VoiceCommand {
@@ -29,6 +29,6 @@ data object GotoCommand : VoiceCommand {
                 IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
             }
         }
-        return CommandService.OkayResponse
+        return CursingCommandService.OkayResponse
     }
 }
