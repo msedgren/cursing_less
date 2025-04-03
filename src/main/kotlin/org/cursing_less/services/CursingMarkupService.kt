@@ -1,5 +1,6 @@
 package org.cursing_less.services
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
@@ -9,7 +10,10 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorCustomElementRenderer
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.editor.colors.EditorFontType
 import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.progress.blockingContext
+import com.intellij.openapi.progress.runBlockingMaybeCancellable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.*
 import com.intellij.psi.PsiDocumentManager
@@ -18,10 +22,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listeners.CursingApplicationListener
@@ -31,12 +31,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.Pair
 import kotlin.collections.ArrayList
 import com.intellij.psi.util.startOffset
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicLong
 
 @Service(Service.Level.APP)
-class CursingMarkupService(private val coroutineScope: CoroutineScope) {
+class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
 
     private val reg = Regex("(?<=^|\\s)[^\\s.]+(?=\\s|\$)")
     private val enabled = AtomicBoolean(true)
@@ -51,6 +52,17 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
 
         private val idGenerator = AtomicLong(0)
         private val mutex = Mutex()
+    }
+
+
+    override fun dispose() {
+        enabled.set(false)
+
+        runBlocking {
+            EditorFactory.getInstance().allEditors.forEach { editor ->
+                removeAllCursingTokensNow(editor)
+            }
+        }
     }
 
     suspend fun toggleEnabled() {
@@ -87,15 +99,15 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
                 tokens.forEach { (offset, cursingColorShape) ->
                     val allInlays = editor.inlayModel.getInlineElementsInRange(offset, offset)
                     // if (offset != cursorOffset || allInlays.size < 2) {
-                        val existing = existingInlays[offset]
-                        if (existing?.second == cursingColorShape) {
-                            val inlay = existingInlays.remove(offset)?.first
-                            if (inlay?.isValid == true) {
-                                inlay.repaint()
-                            }
-                        } else {
-                            addColoredShapeAboveCursingToken(editor, cursingColorShape, offset)
+                    val existing = existingInlays[offset]
+                    if (existing?.second == cursingColorShape) {
+                        val inlay = existingInlays.remove(offset)?.first
+                        if (inlay?.isValid == true) {
+                            inlay.repaint()
                         }
+                    } else {
+                        addColoredShapeAboveCursingToken(editor, cursingColorShape, offset)
+                    }
                     // }
                 }
 
@@ -133,7 +145,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
                             }
                     }
                     editor.contentComponent.repaint()
-                    createAndSetColorAndShapeManager(editor).freeAll()
+                    editor.removeUserData(ColorAndShapeManager.KEY)
                 }
             }
         }
@@ -271,11 +283,19 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
     class ColoredShapeRenderer(
         private val cursingColorShape: CursingColorShape
     ) : EditorCustomElementRenderer {
+
         override fun calcWidthInPixels(inlay: Inlay<*>): Int {
             return 1
         }
 
+        override fun calcHeightInPixels(inlay: Inlay<*>): Int {
+            val textMetrics = inlay.editor.contentComponent.getFontMetrics(inlay.editor.colorsScheme.getFont(
+                EditorFontType.PLAIN))
+            return (textMetrics.stringWidth("X")) * 2
+        }
+
         override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
+            
             g.color = cursingColorShape.color.color
             cursingColorShape.shape.paint(inlay, g, targetRegion, textAttributes)
         }
@@ -285,7 +305,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
     class Debouncer(
         private val delay: Int,
         private val coroutineScope: CoroutineScope
-    ) {
+    ): Disposable {
         private val updateQueue = MergingUpdateQueue("cursing_less_debounce", delay, true, null)
 
         companion object {
@@ -305,6 +325,14 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) {
                 }
             }
             updateQueue.queue(task)
+        }
+
+        override fun dispose() {
+            runBlocking {
+                mutex.withLock {
+                    updateQueue.dispose()
+                }
+            }
         }
     }
 

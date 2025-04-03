@@ -17,7 +17,7 @@ version = providers.gradleProperty("pluginVersion").get()
 
 // Set the JVM language level used to build the project.
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 // Configure project's dependencies
@@ -155,3 +155,10 @@ intellijPlatformTesting {
         }
     }
 }
+tasks.qodanaScan {
+    if (System.getProperty("os.arch") == "aarch64") {
+        environment.put("JAVA_TOOL_OPTIONS", "-XX:UseSVE=0")
+        environment.put("JDK_JAVA_OPTIONS", "-XX:UseSVE=0")
+    }
+}
+

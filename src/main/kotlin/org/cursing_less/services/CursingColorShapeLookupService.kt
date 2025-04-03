@@ -2,7 +2,6 @@ package org.cursing_less.services
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.wm.IdeFocusManager
@@ -11,7 +10,7 @@ import org.cursing_less.color_shape.CursingColorShape
 import javax.swing.SwingUtilities
 
 @Service(Service.Level.APP)
-class CursingLookupService {
+class CursingColorShapeLookupService {
 
     fun parseToColorShape(colorString: String, shapeString: String): CursingColorShape? {
         val cursingPreferenceService = ApplicationManager.getApplication()

@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.services.CursingMarkupService
 import org.cursing_less.services.CursingMarkupService.Companion.INLAY_KEY
-import org.cursing_less.services.CursingUserInteraction
+import org.cursing_less.services.CursingUserInteractionService
 
 class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretListener {
 
@@ -24,17 +24,17 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
                 if (event.newPosition.line == event.oldPosition.line && event.newPosition.column == event.oldPosition.column) {
                     val inlays =
                         event.editor.inlayModel.getInlineElementsInRange(caret.offset, caret.offset)
-                    if(inlays.size < 2) {
+                    val cursingUserInteractionService =
+                        ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+                    if(!cursingUserInteractionService.leftMouseSelected) {
                         val data = inlays.firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
                         data?.let {
-                            val cursingUserInteraction =
-                                ApplicationManager.getApplication().getService(CursingUserInteraction::class.java)
                             val move = getMoveDirection(event)
                             thisLogger().warn("moving cursor by $move")
                             event.editor.caretModel.moveCaretRelatively(
                                 move,
                                 0,
-                                editor.selectionModel.hasSelection() || cursingUserInteraction.leftMouseSelected,
+                                editor.selectionModel.hasSelection() || cursingUserInteractionService.makingSelection,
                                 false,
                                 false
                             )
@@ -49,17 +49,17 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
     }
 
     private fun getMoveDirection(event: CaretEvent): Int {
-        val service = ApplicationManager.getApplication().getService(CursingUserInteraction::class.java)
+        val service = ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
         val directionState = service.direction
-        if(directionState.direction != CursingUserInteraction.CursingUserDirection.NONE &&
-            (directionState.pressed || System.currentTimeMillis() - directionState.timeInMs <= 50)) {
-            if(directionState.direction == CursingUserInteraction.CursingUserDirection.LEFT) {
-                return -1
+        return if(directionState.direction != CursingUserInteractionService.CursingUserDirection.NONE &&
+            (System.currentTimeMillis() - directionState.timeInMs <= 50)) {
+            if(directionState.direction == CursingUserInteractionService.CursingUserDirection.LEFT) {
+                -1
             } else {
-                return 1
+                1
             }
         } else {
-            return if (event.newPosition.leansForward) 1 else -1
+            0
         }
     }
 

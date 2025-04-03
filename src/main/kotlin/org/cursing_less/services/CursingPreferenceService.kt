@@ -2,8 +2,6 @@ package org.cursing_less.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.ui.JBColor
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
 import java.awt.Color

@@ -5,9 +5,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 @Service(Service.Level.APP)
-class CursingUserInteraction {
+class CursingUserInteractionService {
     private val leftMouseSelectedAtomic = AtomicBoolean(false)
-    private val directionAtomic = AtomicReference(CursingDirectionState(CursingUserDirection.NONE, false,0L))
+    private val directionAtomic = AtomicReference(CursingDirectionState(CursingUserDirection.NONE, 0L))
 
     var leftMouseSelected: Boolean
         get() = leftMouseSelectedAtomic.get()
@@ -25,6 +25,6 @@ class CursingUserInteraction {
         LEFT, RIGHT, NONE
     }
 
-    data class CursingDirectionState(val direction: CursingUserDirection, val pressed: Boolean, val timeInMs: Long)
+    data class CursingDirectionState(val direction: CursingUserDirection, val timeInMs: Long)
 
 }
