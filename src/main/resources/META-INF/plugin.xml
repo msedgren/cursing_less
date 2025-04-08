@@ -9,7 +9,7 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <applicationListeners>
-        <listener class="org.cursing_less.listeners.CursingApplicationListener"
+        <listener class="org.cursing_less.listener.CursingApplicationListener"
                   topic="com.intellij.ide.AppLifecycleListener"/>
     </applicationListeners>
 
@@ -17,7 +17,7 @@
         <notificationGroup id="cursing_less"
                            displayType="BALLOON"
                            key="cursing_less.notification.group.name"/>
-        <postStartupActivity implementation="org.cursing_less.listeners.CursingApplicationListener$StartupActivity"/>
+        <postStartupActivity implementation="org.cursing_less.listener.CursingApplicationListener$StartupActivity"/>
 
         <editorActionHandler action="EditorDelete" implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
         <editorActionHandler action="EditorBackSpace"

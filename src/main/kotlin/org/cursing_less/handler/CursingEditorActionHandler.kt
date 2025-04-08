@@ -6,7 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler
-import org.cursing_less.services.CursingUserInteractionService
+import org.cursing_less.service.CursingUserInteractionService
 
 class CursingEditorActionHandler(private val originalHandler: EditorActionHandler,
                                  private val direction: CursingUserInteractionService.CursingUserDirection

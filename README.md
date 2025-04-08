@@ -16,7 +16,7 @@ Please see this for usage instruction.
 
 ### Note: this assumes that you have Talon installed and running along with [Talonhub/community](https://github.com/talonhub/community).
 1. Install this plugin in IntelliJ. You may build or, when available, install from 
-the IntelliJ Market place. When building use the following steps:
+the IntelliJ Marketplace. When building use the following steps:
    2. `./gradlew clean buildPlugin` (Mac or Linux a gradlew.bat is provided for windows)
    3. Browse to Plugins in Settings and click the gear.
    4. Select 'Install Plugin From Disk...'

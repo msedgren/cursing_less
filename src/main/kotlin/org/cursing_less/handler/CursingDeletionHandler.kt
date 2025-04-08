@@ -4,7 +4,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler
-import org.cursing_less.services.CursingMarkupService.Companion.INLAY_KEY
+import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 
 class CursingDeletionHandler(private val originalHandler: EditorActionHandler) :
     EditorActionHandler(originalHandler.runForAllCarets()) {

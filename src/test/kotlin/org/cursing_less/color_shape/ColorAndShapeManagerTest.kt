@@ -1,11 +1,12 @@
 package org.cursing_less.color_shape
 
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.JBColor
-import junit.framework.TestCase
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.*
 
 
-class ColorAndShapeManagerTest : BasePlatformTestCase() {
+
+class ColorAndShapeManagerTest  {
 
 
     private val colors = listOf(
@@ -18,6 +19,7 @@ class ColorAndShapeManagerTest : BasePlatformTestCase() {
     )
 
 
+    @Test
     fun testConsuming() {
         // given a color and shape manager
         val manager = ColorAndShapeManager(colors, shapes)
@@ -42,6 +44,7 @@ class ColorAndShapeManagerTest : BasePlatformTestCase() {
     }
     
 
+    @Test
     fun testFreeingConsumed() {
         // given a color and shape manager
         val manager = ColorAndShapeManager(colors, shapes)

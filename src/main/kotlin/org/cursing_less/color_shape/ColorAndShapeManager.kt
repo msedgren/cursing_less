@@ -26,10 +26,12 @@ class ColorAndShapeManager(
         val KEY = Key.create<ColorAndShapeManager>(NAME)
     }
 
+    @Synchronized
     fun consumedAtOffset(offset: Int):ConsumedData? {
         return consumed[offset]
     }
 
+    @Synchronized
     fun consume(character: Char, offset: Int, endOffset: Int): CursingColorShape? {
         val lowerCaseCharacter = character.lowercaseChar()
         val existing =
@@ -43,11 +45,13 @@ class ColorAndShapeManager(
         return consumedThing
     }
 
+    @Synchronized
     fun freeAll() {
         this.consumed = HashMap()
         this.characterState = HashMap()
     }
 
+    @Synchronized
     fun free(offset: Int) {
         val freed = consumed.remove(offset)
         if (freed != null) {
@@ -62,6 +66,7 @@ class ColorAndShapeManager(
         }
     }
 
+    @Synchronized
     fun find(colorShape: CursingColorShape, character: Char): ConsumedData? {
         val lowerCaseCharacter = character.lowercaseChar()
         return consumed
