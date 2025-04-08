@@ -40,7 +40,7 @@ class CursingMarkupServiceTest {
     }
 
     @Test
-    fun testFoo() {
+    fun testBasicMarkupOfTokens() {
         System.err.println("testFoo Started")
         val project = codeInsightFixture.project
         var inlays: List<Inlay<*>> = listOf()
@@ -61,7 +61,7 @@ class CursingMarkupServiceTest {
                 .toList()
         }
 
-        assertEquals(7, inlays.size)
+        assertEquals(8, inlays.size)
     }
 
 }

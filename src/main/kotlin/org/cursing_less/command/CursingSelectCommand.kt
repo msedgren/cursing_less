@@ -23,6 +23,7 @@ class CursingSelectCommand : VoiceCommand {
                 withContext(Dispatchers.EDT) {
                     val consumedData = cursingColorShapeLookupService.parseToColorShape(colorShape, character, editor)
                     if (consumedData != null) {
+                        editor.caretModel.moveToOffset(consumedData.startOffset)
                         editor.selectionModel.setSelection(consumedData.startOffset, consumedData.endOffset)
                         editor.selectionModel.copySelectionToClipboard()
                         CursingCommandService.OkayResponse
