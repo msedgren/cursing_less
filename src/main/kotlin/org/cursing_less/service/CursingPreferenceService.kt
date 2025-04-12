@@ -12,7 +12,7 @@ class CursingPreferenceService {
 
     val colors = listOf(
         CursingColor("red", JBColor.RED),
-        CursingColor("blue", JBColor.BLUE),
+        CursingColor("blue", JBColor.BLUE.brighter() as JBColor),
         CursingColor("green", JBColor.GREEN),
         CursingColor("yellow", JBColor(Color(255, 212, 0), Color(255, 212, 0))),
         CursingColor("purple", JBColor(Color(191, 64, 191), Color(218, 112, 214)))
@@ -29,6 +29,12 @@ class CursingPreferenceService {
 
     val codedColors = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }
     val codedShapes = shapes.withIndex().associateTo(mutableMapOf()) { Pair(encodeToShape(it.index + 1), it.value) }
+
+    val scale = 0.7
+
+    val tokenPattern =
+        Regex("([\\w]+)|([0-9]+)|([\\(\\)]+)|([{}]+)|([<>]+)|([\\[\\]]+)|([^\\w_0-9\\(\\){}<>\\[\\]\\s\\.]+)")
+
 
     private val echoCommandsAtomic = AtomicBoolean(false)
 

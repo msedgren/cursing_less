@@ -3,11 +3,11 @@ package org.cursing_less.listener
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Inlay
-import com.intellij.openapi.progress.runBlockingMaybeCancellable
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.*
 import com.intellij.testFramework.runInEdtAndWait
+import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.junit.jupiter.api.AfterEach
@@ -49,7 +49,7 @@ class CursingMarkupServiceTest {
         val cursingMarkupService = project.service<CursingMarkupService>()
         assertTrue(CursingApplicationListener.handler.initialized.get())
 
-        runBlockingMaybeCancellable {
+        runBlocking {
             cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
         }
 

@@ -27,7 +27,7 @@ class ColorAndShapeManager(
     }
 
     @Synchronized
-    fun consumedAtOffset(offset: Int):ConsumedData? {
+    fun consumedAtOffset(offset: Int): ConsumedData? {
         return consumed[offset]
     }
 
@@ -64,6 +64,19 @@ class ColorAndShapeManager(
         } else {
             thisLogger().error("unable to free element at offset ${offset}!")
         }
+    }
+
+    @Synchronized
+    fun find(color: CursingColor, next: Boolean, offset: Int): ConsumedData? {
+        return consumed
+            .toSortedMap({ a, b ->
+                Math.abs(a - offset) - Math.abs(b - offset)
+            })
+            .filter { (consumedOffset, consumedData) ->
+                consumedData.colorShape.color == color && (next && consumedOffset > offset || !next && consumedOffset < offset)
+            }
+            .firstOrNull()
+            ?.value
     }
 
     @Synchronized
