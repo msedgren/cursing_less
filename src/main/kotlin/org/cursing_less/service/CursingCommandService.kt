@@ -201,8 +201,8 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     private suspend fun processCommand(command: String, project: Project, editor: Editor?): VoiceCommandResponse {
         val voiceCommandParserService =
             ApplicationManager.getApplication().getService(VoiceCommandParserService::class.java)
-        val split = command.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        val commandInformation = split[1].split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val commandPortion = command.substring(command.indexOf("/") + 1)
+        val commandInformation = commandPortion.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val voiceCommand = voiceCommandParserService.fromRequestUri(commandInformation[0])
         val commandParams = commandInformation.toList().subList(1, commandInformation.size)
 
@@ -223,7 +223,6 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
         val project = editor?.project ?: ProjectManager.getInstance().defaultProject
         return Pair(project, editor)
     }
-
 
     class RequestHandler : HttpHandler {
 

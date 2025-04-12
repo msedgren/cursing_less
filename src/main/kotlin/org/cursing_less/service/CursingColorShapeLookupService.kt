@@ -6,6 +6,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.wm.IdeFocusManager
 import org.cursing_less.color_shape.ColorAndShapeManager
+import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingColorShape
 import javax.swing.SwingUtilities
 
@@ -28,7 +29,20 @@ class CursingColorShapeLookupService {
         }
     }
 
-    suspend fun parseToColorShape(colorShape: CursingColorShape, character: Char, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    fun parseColor(colorString: String): CursingColor? {
+        val cursingPreferenceService = ApplicationManager.getApplication()
+            .getService(CursingPreferenceService::class.java)
+
+        val colorToFind = cursingPreferenceService.encodeToColor(colorString.toInt())
+        return cursingPreferenceService.codedColors[colorToFind]
+    }
+
+    suspend fun findConsumed(color: CursingColor, next: Boolean, editor: Editor): ColorAndShapeManager.ConsumedData? {
+        val colorAndShapeManager = editor.getUserData(ColorAndShapeManager.KEY)
+        return colorAndShapeManager?.find(color, next, editor.caretModel.offset)
+    }
+
+    suspend fun findConsumed(colorShape: CursingColorShape, character: Char, editor: Editor): ColorAndShapeManager.ConsumedData? {
         val colorAndShapeManager = editor.getUserData(ColorAndShapeManager.KEY)
         return colorAndShapeManager?.find(colorShape, character)
     }

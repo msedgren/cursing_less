@@ -21,7 +21,6 @@ version = providers.gradleProperty("pluginVersion").get()
 kotlin {
     jvmToolchain(21)
 }
-
 // Configure project's dependencies
 repositories {
     mavenCentral()

@@ -6,7 +6,7 @@
 
 <!-- Plugin description -->
 This project to provides basic support for using IntelliJ with [Talon](https://talonvoice.com/) and more advanced support
-of navigation and manipulation using decorators on text file. Basic support is built on top of that provided by the
+of navigation and manipulation using decorators on text file. Basic support is built on top of and replaces that provided by the
 plugin [Voice Code Idea](https://github.com/anonfunc/intellij-voicecode).
 
 This plugin requires [cursing_less_talon](https://github.com/msedgren/cursing_less_talon).

@@ -7,7 +7,7 @@ import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingPreferenceService
 
 
-class EchoCommand : VoiceCommand {
+data object  EchoCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "toggle_echo"
 
