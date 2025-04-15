@@ -13,14 +13,10 @@ class CursingVisibleAreaListener(private val coroutineScope: CoroutineScope) : V
 
     override fun visibleAreaChanged(event: VisibleAreaEvent) {
         coroutineScope.launch(Dispatchers.EDT) {
-            if(!event.editor.isDisposed) {
-                val range = event.editor.calculateVisibleRange()
-                val difference = range.endOffset - range.startOffset
-                val cursorOffset = range.startOffset + difference / 2
-
+            if (!event.editor.isDisposed) {
                 val cursingMarkupService =
                     ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-                cursingMarkupService.updateCursingTokens(event.editor, cursorOffset)
+                cursingMarkupService.updateCursingTokens(event.editor, event.editor.caretModel.offset)
             }
         }
     }
