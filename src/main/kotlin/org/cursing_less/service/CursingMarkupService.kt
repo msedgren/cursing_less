@@ -25,12 +25,12 @@ import org.cursing_less.listener.CursingApplicationListener
 import java.awt.Graphics
 import java.awt.Rectangle
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.Pair
 import com.intellij.psi.util.startOffset
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
 
 typealias NextFunction = (PsiElement) -> PsiElement?
@@ -194,12 +194,13 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             val found = mutableMapOf<Int, CursingColorShape>()
             if (file != null) {
                 val elements = findVisibleElements(visibleArea, file)
+                val offsetComparator = OffsetDistanceComparator<Pair<PsiElement, String>>(offset) { it.first.startOffset }
                 val consumed = elements
                     .asSequence()
                     .filter { visibleArea.contains(it.startOffset) }
                     .map { Pair(it, it.text) }
                     .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
-                    .sortedWith { a, b -> abs(offset - a.first.startOffset) - abs(offset - b.first.startOffset) }
+                    .sortedWith(offsetComparator)
                     .mapNotNull { (element, text) ->
                         manager.consume(text[0], element.startOffset, element.endOffset)?.let {
                             Pair(element.startOffset, it)
@@ -236,11 +237,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         visibleArea: ProperTextRange
     ): List<Pair<Int, CursingColorShape>> {
         val tokens = findAllCursingTokensWithin(text, visibleArea.startOffset)
+        val offsetComparator = OffsetDistanceComparator<CursingToken>(currentOffset) { it.startOffset }
         return tokens
             .filterNot { alreadyKnown.contains(it.startOffset) }
-            .sortedWith { a, b ->
-                abs(currentOffset - a.startOffset) - abs(currentOffset - b.startOffset)
-            }
+            .sortedWith(offsetComparator)
             .mapNotNull {
                 colorAndShapeManager.consume(it.text[0], it.startOffset, it.endOffset)?.let { consumed ->
                     Pair(it.startOffset, consumed)
@@ -279,6 +279,16 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     data class CursingToken(val startOffset: Int, val endOffset: Int, val text: String)
+
+    /**
+     * Comparator for sorting elements based on their distance from a reference offset.
+     * Elements closer to the reference offset will be ranked higher.
+     */
+    class OffsetDistanceComparator<T>(private val offset: Int, private val offsetExtractor: (T) -> Int) : Comparator<T> {
+        override fun compare(a: T, b: T): Int {
+            return abs(offset - offsetExtractor(a)) - abs(offset - offsetExtractor(b))
+        }
+    }
 
     class Debouncer(
         private val delay: Int,
