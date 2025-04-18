@@ -6,6 +6,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.apache.http.HttpStatus
 import org.cursing_less.service.CursingColorShapeLookupService
 import org.cursing_less.service.CursingCommandService
 
@@ -28,7 +29,6 @@ data object CursingCopyCommand : VoiceCommand {
                         editor.caretModel.moveToOffset(consumedData.endOffset)
                         editor.selectionModel.setSelection(consumedData.startOffset, consumedData.endOffset)
                         editor.selectionModel.copySelectionToClipboard()
-                        CursingCommandService.OkayResponse
                     }
                 }
                 if (consumedData != null && cut) {

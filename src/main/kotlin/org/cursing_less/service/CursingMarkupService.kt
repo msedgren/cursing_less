@@ -37,10 +37,11 @@ typealias NextFunction = (PsiElement) -> PsiElement?
 typealias VisibleChecker = (PsiElement) -> Boolean
 
 @Service(Service.Level.APP)
-class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
+class CursingMarkupService(val coroutineScope: CoroutineScope) : Disposable {
 
-    private val enabled = AtomicBoolean(true)
     private val debouncer = Debouncer(250, coroutineScope)
+    private val enabledAtomic = AtomicBoolean(true)
+
 
     companion object {
         private const val INLAY_NAME = "CURSING_INLAY"
@@ -53,9 +54,12 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         private val mutex = Mutex()
     }
 
+    val enabled: Boolean
+        get() = enabledAtomic.get()
+
 
     override fun dispose() {
-        enabled.set(false)
+        enabledAtomic.set(false)
         debouncer.dispose()
         ApplicationManager.getApplication().executeOnPooledThread {
             runBlocking {
@@ -66,12 +70,12 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
     }
 
-    fun toggleEnabled() {
-        enabled.set(!enabled.get())
+    suspend fun toggleEnabled() {
+        enabledAtomic.set(!enabledAtomic.get())
 
-        coroutineScope.launch(Dispatchers.EDT) {
+        withContext(Dispatchers.EDT) {
             EditorFactory.getInstance().allEditors.forEach { editor ->
-                if (enabled.get()) {
+                if (enabledAtomic.get()) {
                     updateCursingTokens(editor, editor.caretModel.offset)
 
                 } else {
@@ -89,7 +93,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int) {
-        if (enabled.get() && !editor.isDisposed) {
+        if (enabledAtomic.get() && !editor.isDisposed) {
             // thisLogger().trace("Updating cursing tokens for ${editor.editorKind.name} with ID ${createAndSetId(editor)}")
             val colorAndShapeManager = createAndSetColorAndShapeManager(editor)
             colorAndShapeManager.freeAll()
@@ -122,6 +126,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                 editor.contentComponent.repaint()
             }
         }
+    }
+
+    fun flush() {
+        debouncer.flush()
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
@@ -321,6 +329,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     updateQueue.dispose()
                 }
             }
+        }
+
+        fun flush() {
+            updateQueue.flush()
         }
     }
 

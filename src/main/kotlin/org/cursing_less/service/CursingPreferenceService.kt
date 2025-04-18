@@ -38,6 +38,9 @@ class CursingPreferenceService {
 
     private val echoCommandsAtomic = AtomicBoolean(false)
 
+    val echoCommands: Boolean
+        get() = echoCommandsAtomic.get()
+
     fun encodeToColor(given: Int) = "color_$given"
     fun encodeToShape(given: Int) = "shape_$given"
 
@@ -45,7 +48,8 @@ class CursingPreferenceService {
         echoCommandsAtomic.set(!echoCommandsAtomic.get())
     }
 
-    val echoCommands: Boolean
-        get() = echoCommandsAtomic.get()
+    fun mapToCode(color: CursingColor) = colors.indexOf(color) + 1
+    fun mapToCode(shape: CursingShape) = shapes.indexOf(shape) + 1
+
 
 }

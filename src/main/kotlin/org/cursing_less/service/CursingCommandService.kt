@@ -158,10 +158,10 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
 
             Thread.sleep(200)
 
-            thisLogger().info("Successfully sent shutdown command to existing service, response: $shutdownResponse")
+            thisLogger().debug("Successfully sent shutdown command to existing service, response: $shutdownResponse")
             return true
         } catch (e: Exception) {
-            thisLogger().info("Error sending shutdown command to existing service", e)
+            thisLogger().debug("Error sending shutdown command to existing service", e)
             return false
         }
     }
