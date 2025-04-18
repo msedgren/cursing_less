@@ -1,14 +1,11 @@
 package org.cursing_less.command
 
 import com.intellij.openapi.application.*
-import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.apache.http.HttpStatus
 import org.cursing_less.service.CursingColorShapeLookupService
 import org.cursing_less.service.CursingCommandService
+import org.cursing_less.service.CursingSelectionService
 
 data object CursingCopyCommand : VoiceCommand {
 
@@ -18,42 +15,26 @@ data object CursingCopyCommand : VoiceCommand {
         if (editor != null && commandParameters.size == 4) {
             val cursingColorShapeLookupService = ApplicationManager.getApplication()
                 .getService(CursingColorShapeLookupService::class.java)
+            val cursingSelectionService = ApplicationManager.getApplication()
+                .getService(CursingSelectionService::class.java)
+
             val cut = commandParameters[0] == "cut"
             val colorShape =
                 cursingColorShapeLookupService.parseToColorShape(commandParameters[1], commandParameters[2])
             val character = commandParameters[3].firstOrNull()
-            if (colorShape != null && character != null) {
-                val consumedData = cursingColorShapeLookupService.findConsumed(colorShape, character, editor)
-                withContext(Dispatchers.EDT) {
-                    if (consumedData != null) {
-                        editor.caretModel.moveToOffset(consumedData.endOffset)
-                        editor.selectionModel.setSelection(consumedData.startOffset, consumedData.endOffset)
-                        editor.selectionModel.copySelectionToClipboard()
-                    }
-                }
-                if (consumedData != null && cut) {
-                    readAndWriteAction {
-                        val document = editor.document
-                        val writable = document.isWritable
-                        val cp = CommandProcessor.getInstance()
 
-                        writeAction {
-                            document.setReadOnly(false)
-                            try {
-                                cp.executeCommand(
-                                    project,
-                                    { document.deleteString(consumedData.startOffset, consumedData.endOffset) },
-                                    "Cut",
-                                    "cutGroup"
-                                )
-                            } finally {
-                                document.setReadOnly(!writable)
-                            }
-                        }
+            if (colorShape != null && character != null) {
+                val consumedData = cursingSelectionService.findAndSelect(colorShape, character, editor)
+
+                if (consumedData != null) {
+                    cursingSelectionService.copySelectionToClipboard(editor)
+
+                    if (cut) {
+                        cursingSelectionService.cutSelectedText(consumedData, editor, project)
                     }
+                    return CursingCommandService.OkayResponse
                 }
             }
-            return CursingCommandService.OkayResponse
         }
         return CursingCommandService.BadResponse
     }
