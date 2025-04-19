@@ -30,7 +30,7 @@ data object CursingCopyCommand : VoiceCommand {
                     cursingSelectionService.copySelectionToClipboard(editor)
 
                     if (cut) {
-                        cursingSelectionService.cutSelectedText(consumedData, editor, project)
+                        cursingSelectionService.cutSelectedText(consumedData.startOffset, consumedData.endOffset, editor, project)
                     }
                     return CursingCommandService.OkayResponse
                 }

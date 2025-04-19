@@ -53,17 +53,11 @@ data object CursingCopyToCommand : VoiceCommand {
 
                         // Cut if requested
                         if (cut) {
-                            val consumedDataForCut = org.cursing_less.color_shape.ColorAndShapeManager.ConsumedData(
-                                ' ', // Character doesn't matter for cutting
-                                colorShape,
-                                selectionStart,
-                                selectionEnd
-                            )
-
                             // We need to exit EDT context to call cutSelectedText which has its own EDT context
                             withContext(Dispatchers.Default) {
                                 cursingSelectionService.cutSelectedText(
-                                    consumedDataForCut,
+                                    selectionStart,
+                                    selectionEnd,
                                     editor,
                                     project
                                 )

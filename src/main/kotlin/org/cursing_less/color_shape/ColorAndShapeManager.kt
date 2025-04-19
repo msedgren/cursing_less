@@ -32,15 +32,48 @@ class ColorAndShapeManager(
     }
 
     @Synchronized
-    fun consume(character: Char, offset: Int, endOffset: Int): CursingColorShape? {
+    fun consume(offset: Int, text: String): CursingColorShape? {
+        require(text.isNotEmpty()) { "text must not be empty!" }
+
+        val character = text[0]
+        if (consumed.contains(offset)) {
+            throw IllegalStateException("Attempted to consume at offset $offset but it has already been consumed!")
+        }
+
         val lowerCaseCharacter = character.lowercaseChar()
+        // pull the object containing free colors and shapr for the given character
         val existing =
             characterState.computeIfAbsent(lowerCaseCharacter) { FreeCursingColorShape(generatePermutations()) }
+        // get the preference (what it was previously set to) at that offset.
         val preference = offsetPreference[offset]
+        // attempt to consume
         val consumedThing = existing.consume(preference)
+        var textToConsume = text
         if (consumedThing != null) {
-            consumed[offset] = ConsumedData(character, consumedThing, offset, endOffset)
+            // Check for overlapping consumed data and alter the end offset accordingly.
+            consumed = consumed.mapValues {
+                val startOffsetOverlaps = offset >= it.value.startOffset && offset < it.value.endOffset
+                val currentEnd = offset + textToConsume.length
+                //done here so we don't need to loop twice.
+                val endOffsetOverlaps = currentEnd >= it.value.startOffset && currentEnd < it.value.endOffset
+                if (endOffsetOverlaps && !startOffsetOverlaps) {
+                    textToConsume = textToConsume.substring(0, textToConsume.length - (currentEnd - it.value.startOffset)).trimEnd()
+                }
+                if (startOffsetOverlaps) {
+                    if (endOffsetOverlaps) {
+                        textToConsume = textToConsume +
+                                it.value.consumedText.substring(currentEnd - it.value.startOffset,  it.value.consumedText.length).trimEnd()
+                    }
+                    it.value.copy(consumedText = it.value.consumedText.substring(0, offset - it.value.startOffset).trimEnd())
+                } else {
+                    it.value
+                }
+            }.toMutableMap()
+
+            consumed[offset] =
+                ConsumedData(consumedThing, offset, textToConsume, text)
             offsetPreference[offset] = consumedThing
+
         }
         return consumedThing
     }
@@ -88,20 +121,39 @@ class ColorAndShapeManager(
             ?.value
     }
 
+    /**
+     * Generates a list of all possible [CursingColorShape]s in a random order.
+     */
     private fun generatePermutations(): MutableList<CursingColorShape> {
         return ArrayList(permutations)
     }
 
+    /**
+     * Represents a consumed [CursingColorShape] at a given offset.
+     *
+     * @property character The consumed character.
+     * @property colorShape The consumed [CursingColorShape].
+     * @property startOffset The start offset of the consumed text.
+     */
     data class ConsumedData(
-        val character: Char,
         val colorShape: CursingColorShape,
         val startOffset: Int,
-        val endOffset: Int
+        val consumedText: String,
+        val originalText: String = consumedText,
     ) {
+        val character = consumedText[0]
         val characterConsumed = character.lowercaseChar()
+        val endOffset = startOffset + consumedText.length
     }
 
 
+    /**
+     * Represents a set of free [CursingColorShape]s.
+     *
+     * @property free The list of free [CursingColorShape]s.
+     */
+    @Suppress("unused")
+    private data class FreeCursingColorShapeState(val free: MutableList<CursingColorShape>) {}
     class FreeCursingColorShape(private val free: MutableList<CursingColorShape>) {
 
         init {

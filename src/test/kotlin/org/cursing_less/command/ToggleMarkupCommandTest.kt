@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.*
@@ -55,21 +56,7 @@ class ToggleMarkupCommandTest {
     }
 
     @Test
-    fun testRun() {
-        // Setup test environment
-        val project = codeInsightFixture.project
-
-        runBlocking {
-            // Run the command
-            val response = ToggleMarkupCommand.run(emptyList(), project, null)
-
-            // Verify the response
-            assertEquals(CursingCommandService.OkayResponse, response)
-        }
-    }
-
-    @Test
-    fun testToggleMarkupRemovesAndAddsInlays() {
+    fun testToggleMarkupRemovesAndAddsInlays() = runBlocking {
         // Setup test environment with a document
         val project = codeInsightFixture.project
         codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
@@ -78,23 +65,21 @@ class ToggleMarkupCommandTest {
         // Get the markup service
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         // Verify that markup is present initially
-        runBlocking {
-            cursingMarkupService.updateCursingTokensNow(editor, 0)
-        }
-        var inlays = getInlays(editor)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
 
+        var inlays = getInlays(editor)
         assertTrue(inlays.isNotEmpty(), "Inlays should be present initially")
         val initialInlayCount = inlays.size
 
         // Run the toggle command to disable markup
-        runBlocking { toggleMarkupAndWait(cursingMarkupService) }
+        toggleMarkupAndWait(cursingMarkupService, project, editor)
 
         // Verify that markup is removed
         inlays = getInlays(editor)
         assertTrue(inlays.isEmpty(), "Inlays should be removed after toggling markup off")
 
         // Run the toggle command again to enable markup
-        runBlocking { toggleMarkupAndWait(cursingMarkupService) }
+        toggleMarkupAndWait(cursingMarkupService, project, editor)
 
         // Verify that markup is present again
         inlays = getInlays(editor)
@@ -104,20 +89,14 @@ class ToggleMarkupCommandTest {
         assertEquals(initialInlayCount, inlays.size, "The number of inlays should be the same as initially")
     }
 
-    private suspend fun toggleMarkupAndWait(cursingMarkupService: CursingMarkupService) {
-        // Call the service directly to ensure it works
-        cursingMarkupService.toggleEnabled()
-
-        // Wait for the toggle to take effect
-        withContext(Dispatchers.EDT) {
-            cursingMarkupService.flush()
-        }
-        cursingMarkupService.coroutineScope.coroutineContext.job.children.forEach { it.join() }
+    private suspend fun toggleMarkupAndWait(cursingMarkupService: CursingMarkupService, project: Project, editor: Editor) {
+        ToggleMarkupCommand.run(listOf(""), project, editor)
+        cursingMarkupService.processExistingWork()
     }
 
-    private fun getInlays(editor: Editor): List<Inlay<*>> {
+    private suspend fun getInlays(editor: Editor): List<Inlay<*>> {
         var inlays: List<Inlay<*>> = listOf()
-        runInEdtAndWait {
+        withContext(Dispatchers.EDT) {
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
             inlays = editor.inlayModel.getInlineElementsInRange(0, 1000)
                 .filter { it.getUserData(INLAY_KEY) != null }

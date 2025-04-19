@@ -58,7 +58,7 @@ class CursingSelectionService {
      * @param editor The editor to operate on
      * @param project The project context
      */
-    suspend fun cutSelectedText(consumedData: ColorAndShapeManager.ConsumedData, editor: Editor, project: Project) {
+    suspend fun cutSelectedText(startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
         readAndWriteAction {
             val document = editor.document
             val writable = document.isWritable
@@ -69,7 +69,7 @@ class CursingSelectionService {
                 try {
                     cp.executeCommand(
                         project,
-                        { document.deleteString(consumedData.startOffset, consumedData.endOffset) },
+                        { document.deleteString(startOffset, endOffset) },
                         "Cut",
                         "cutGroup"
                     )

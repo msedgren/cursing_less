@@ -37,7 +37,7 @@ typealias NextFunction = (PsiElement) -> PsiElement?
 typealias VisibleChecker = (PsiElement) -> Boolean
 
 @Service(Service.Level.APP)
-class CursingMarkupService(val coroutineScope: CoroutineScope) : Disposable {
+class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
 
     private val debouncer = Debouncer(250, coroutineScope)
     private val enabledAtomic = AtomicBoolean(true)
@@ -128,8 +128,11 @@ class CursingMarkupService(val coroutineScope: CoroutineScope) : Disposable {
         }
     }
 
-    fun flush() {
-        debouncer.flush()
+    suspend fun processExistingWork() {
+        withContext(Dispatchers.EDT) {
+            debouncer.flush()
+        }
+        this.coroutineScope.coroutineContext.job.children.forEach { it.join() }
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
@@ -210,7 +213,7 @@ class CursingMarkupService(val coroutineScope: CoroutineScope) : Disposable {
                     .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
                     .sortedWith(offsetComparator)
                     .mapNotNull { (element, text) ->
-                        manager.consume(text[0], element.startOffset, element.endOffset)?.let {
+                        manager.consume(element.startOffset, text)?.let {
                             Pair(element.startOffset, it)
                         }
                     }
@@ -250,7 +253,7 @@ class CursingMarkupService(val coroutineScope: CoroutineScope) : Disposable {
             .filterNot { alreadyKnown.contains(it.startOffset) }
             .sortedWith(offsetComparator)
             .mapNotNull {
-                colorAndShapeManager.consume(it.text[0], it.startOffset, it.endOffset)?.let { consumed ->
+                colorAndShapeManager.consume(it.startOffset, it.text)?.let { consumed ->
                     Pair(it.startOffset, consumed)
                 }
             }.toList()
