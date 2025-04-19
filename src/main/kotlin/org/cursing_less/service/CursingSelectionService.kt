@@ -17,27 +17,36 @@ import org.cursing_less.color_shape.CursingColorShape
 class CursingSelectionService {
 
     /**
-     * Finds and selects text based on color shape and character.
-     * 
+     * Finds text based on color shape and character.
+     *
      * @param colorShape The color shape to look for
      * @param character The character to look for
      * @param editor The editor to operate on
      * @return The consumed data if found, null otherwise
      */
-    suspend fun findAndSelect(colorShape: CursingColorShape, character: Char, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    suspend fun find(
+        colorShape: CursingColorShape,
+        character: Char,
+        editor: Editor
+    ): ColorAndShapeManager.ConsumedData? {
         val cursingColorShapeLookupService = ApplicationManager.getApplication()
             .getService(CursingColorShapeLookupService::class.java)
-        
-        val consumedData = cursingColorShapeLookupService.findConsumed(colorShape, character, editor)
-        
+
+        return cursingColorShapeLookupService.findConsumed(colorShape, character, editor)
+    }
+
+    /**
+     * Selects text in editor between start and end offsets.
+     *
+     * @param startOffset The start offset of the selection
+     * @param endOffset The end offset of the selection
+     * @param editor The editor to operate on
+     */
+    suspend fun select(startOffset: Int, endOffset: Int, editor: Editor) {
         withContext(Dispatchers.EDT) {
-            if (consumedData != null) {
-                editor.caretModel.moveToOffset(consumedData.endOffset)
-                editor.selectionModel.setSelection(consumedData.startOffset, consumedData.endOffset)
-            }
+            editor.caretModel.moveToOffset(endOffset)
+            editor.selectionModel.setSelection(startOffset, endOffset)
         }
-        
-        return consumedData
     }
     
     /**
@@ -52,13 +61,13 @@ class CursingSelectionService {
     }
     
     /**
-     * Cuts (deletes) the selected text.
-     * 
+     * Deletes the text.
+     *
      * @param consumedData The data describing the selection
      * @param editor The editor to operate on
      * @param project The project context
      */
-    suspend fun cutSelectedText(startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
+    suspend fun deleteText(startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
         readAndWriteAction {
             val document = editor.document
             val writable = document.isWritable
@@ -70,8 +79,8 @@ class CursingSelectionService {
                     cp.executeCommand(
                         project,
                         { document.deleteString(startOffset, endOffset) },
-                        "Cut",
-                        "cutGroup"
+                        "Delete",
+                        "deleteGroup"
                     )
                 } finally {
                     document.setReadOnly(!writable)

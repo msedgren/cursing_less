@@ -3,6 +3,7 @@ package org.cursing_less.command
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.testFramework.fixtures.*
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
@@ -18,7 +19,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
+import java.awt.datatransfer.DataFlavor
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CursingSelectCommandTest {
@@ -64,13 +65,100 @@ class CursingSelectCommandTest {
         val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
         val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
         // When we run the select command with the numbers and character
-        val response = CursingSelectCommand.run(listOf("$colorNumber", "$shapeNumber", "$character"), project, editor)
+        val response = CursingSelectCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "$character"), project, editor)
         // then the response should be Okay
         assertEquals(CursingCommandService.OkayResponse, response)
         // and the correct text should be selected
         var selectedText = ""
         runInEdtAndWait { selectedText = editor.selectionModel.selectedText ?: "" }
         assertEquals(expected, selectedText)
+    }
+
+    @Test
+    fun testCopy() = runBlocking {
+        // given a test editor
+        val project = codeInsightFixture.project
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+        val editor = codeInsightFixture.editor
+        // and markup is present
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
+
+        //and we can get the shape and color at offset 5 (tied to bar)
+        val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
+        assertNotNull(colorAndShape)
+        // map to numbers
+        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
+        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
+        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
+
+        // when we run the copy command with the numbers and character
+        val response = CursingSelectCommand.run(listOf("copy", "$colorNumber", "$shapeNumber", "b"), project, editor)
+
+        // it works
+        assertEquals(CursingCommandService.OkayResponse, response)
+        // and we can get the copied text
+        val copiedText: Object? = CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor)
+        assertEquals("bar", copiedText)
+    }
+
+    @Test
+    fun testCut() = runBlocking {
+        // given a test editor
+        val project = codeInsightFixture.project
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+        val editor = codeInsightFixture.editor
+        // and markup is present
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
+
+        //and we can get the shape and color at offset 5 (tied to bar)
+        val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
+        assertNotNull(colorAndShape)
+        // map to numbers
+        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
+        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
+        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
+
+        // when we run the cut command with the numbers and character
+        val response = CursingSelectCommand.run(listOf("cut", "$colorNumber", "$shapeNumber", "b"), project, editor)
+
+        // it works
+        assertEquals(CursingCommandService.OkayResponse, response)
+        // and we can get the cut text
+        val copiedText: Object? = CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor)
+        assertEquals("bar", copiedText)
+        // and the text is removed from document
+        assertEquals("<foo></foo>", editor.document.text)
+    }
+
+    @Test
+    fun testClear() = runBlocking {
+        // given a test editor
+        val project = codeInsightFixture.project
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+        val editor = codeInsightFixture.editor
+        // and markup is present
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
+
+        //and we can get the shape and color at offset 5 (tied to bar)
+        val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
+        assertNotNull(colorAndShape)
+        // map to numbers
+        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
+        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
+        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
+
+        // when we run the clear command with the numbers and character
+        val response = CursingSelectCommand.run(listOf("clear", "$colorNumber", "$shapeNumber", "b"), project, editor)
+
+        // it works
+        assertEquals(CursingCommandService.OkayResponse, response)
+        // We don't check the clipboard content for clear mode
+        // Just verify that the text is removed from the document
+        // and the text is removed from document
+        assertEquals("<foo></foo>", editor.document.text)
     }
 
     companion object {

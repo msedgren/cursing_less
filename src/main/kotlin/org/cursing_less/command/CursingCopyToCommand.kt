@@ -55,7 +55,7 @@ data object CursingCopyToCommand : VoiceCommand {
                         if (cut) {
                             // We need to exit EDT context to call cutSelectedText which has its own EDT context
                             withContext(Dispatchers.Default) {
-                                cursingSelectionService.cutSelectedText(
+                                cursingSelectionService.deleteText(
                                     selectionStart,
                                     selectionEnd,
                                     editor,
