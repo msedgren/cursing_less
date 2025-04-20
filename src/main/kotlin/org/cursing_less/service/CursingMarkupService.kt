@@ -270,7 +270,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     private fun addColoredShapeAboveCursingToken(
         editor: Editor, cursingColorShape: CursingColorShape, offset: Int
     ) {
-        editor.inlayModel.addInlineElement(offset, true, Int.MIN_VALUE, ColoredShapeRenderer(cursingColorShape))
+        editor.inlayModel.addInlineElement(offset, true, Int.MAX_VALUE, ColoredShapeRenderer(cursingColorShape))
             ?.putUserData(INLAY_KEY, cursingColorShape)
     }
 

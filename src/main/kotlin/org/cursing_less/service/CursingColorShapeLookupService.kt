@@ -13,12 +13,12 @@ import javax.swing.SwingUtilities
 @Service(Service.Level.APP)
 class CursingColorShapeLookupService {
 
-    fun parseToColorShape(colorString: String, shapeString: String): CursingColorShape? {
+    fun parseToColorShape(colorString: Int, shapeString: Int): CursingColorShape? {
         val cursingPreferenceService = ApplicationManager.getApplication()
             .getService(CursingPreferenceService::class.java)
 
-        val colorToFind = cursingPreferenceService.encodeToColor(colorString.toInt())
-        val shapeToFind = cursingPreferenceService.encodeToShape(shapeString.toInt())
+        val colorToFind = cursingPreferenceService.encodeToColor(colorString)
+        val shapeToFind = cursingPreferenceService.encodeToShape(shapeString)
         val color = cursingPreferenceService.codedColors[colorToFind]
         val shape = cursingPreferenceService.codedShapes[shapeToFind]
 

@@ -17,6 +17,69 @@ import org.cursing_less.color_shape.CursingColorShape
 class CursingSelectionService {
 
     /**
+     * Handles the mode selection for cursing commands.
+     */
+    suspend fun handleMode(mode: String, startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
+        when (mode) {
+            "select" -> handleSelect(startOffset, endOffset, editor)
+            "copy" -> handleCopy(startOffset, endOffset, editor)
+            "cut" -> handleCut(startOffset, endOffset, editor, project)
+            "clear" -> deleteText(startOffset, endOffset, editor, project)
+        }
+    }
+
+    /**
+     * Handles the select mode.
+     */
+    private fun handleSelect(startOffset: Int, endOffset: Int, editor: Editor) {
+        select(startOffset, endOffset, editor)
+    }
+
+    /**
+     * Handles the copy mode.
+     */
+    private fun handleCopy(startOffset: Int, endOffset: Int, editor: Editor) {
+        select(startOffset, endOffset, editor)
+        copySelectionToClipboard(editor)
+    }
+
+    /**
+     * Handles the cut mode.
+     */
+    private suspend fun handleCut(startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
+        select(startOffset, endOffset, editor)
+        copySelectionToClipboard(editor)
+        deleteText(
+            startOffset,
+            endOffset,
+            editor,
+            project
+        )
+    }
+
+    suspend fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
+        require(parameters.size == 3) { "Invalid parameters count: ${parameters.size}" }
+        return find(
+            parameters[0].toInt(),
+            parameters[1].toInt(),
+            parameters[2].firstOrNull(),
+            editor
+        )
+
+    }
+
+    suspend fun find(color: Int, shape: Int, character: Char?, editor: Editor): ColorAndShapeManager.ConsumedData? {
+        val cursingColorShapeLookupService = ApplicationManager.getApplication()
+            .getService(CursingColorShapeLookupService::class.java)
+        val colorShape =
+            cursingColorShapeLookupService.parseToColorShape(color, shape)
+
+        return colorShape?.let {
+            character?.let { cursingColorShapeLookupService.findConsumed(colorShape, character, editor) }
+        }
+    }
+
+    /**
      * Finds text based on color shape and character.
      *
      * @param colorShape The color shape to look for
@@ -42,24 +105,20 @@ class CursingSelectionService {
      * @param endOffset The end offset of the selection
      * @param editor The editor to operate on
      */
-    suspend fun select(startOffset: Int, endOffset: Int, editor: Editor) {
-        withContext(Dispatchers.EDT) {
-            editor.caretModel.moveToOffset(endOffset)
-            editor.selectionModel.setSelection(startOffset, endOffset)
-        }
+    fun select(startOffset: Int, endOffset: Int, editor: Editor) {
+        editor.caretModel.moveToOffset(endOffset)
+        editor.selectionModel.setSelection(startOffset, endOffset)
     }
-    
+
     /**
      * Copies the current selection to clipboard.
-     * 
+     *
      * @param editor The editor to operate on
      */
-    suspend fun copySelectionToClipboard(editor: Editor) {
-        withContext(Dispatchers.EDT) {
-            editor.selectionModel.copySelectionToClipboard()
-        }
+    fun copySelectionToClipboard(editor: Editor) {
+        editor.selectionModel.copySelectionToClipboard()
     }
-    
+
     /**
      * Deletes the text.
      *
@@ -72,7 +131,7 @@ class CursingSelectionService {
             val document = editor.document
             val writable = document.isWritable
             val cp = CommandProcessor.getInstance()
-            
+
             writeAction {
                 document.setReadOnly(false)
                 try {
