@@ -16,7 +16,6 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.endOffset
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import org.cursing_less.color_shape.ColorAndShapeManager
@@ -270,7 +269,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     private fun addColoredShapeAboveCursingToken(
         editor: Editor, cursingColorShape: CursingColorShape, offset: Int
     ) {
-        editor.inlayModel.addInlineElement(offset, true, Int.MAX_VALUE, ColoredShapeRenderer(cursingColorShape))
+        editor.inlayModel.addInlineElement(offset, true, Int.MIN_VALUE, ColoredShapeRenderer(cursingColorShape))
             ?.putUserData(INLAY_KEY, cursingColorShape)
     }
 
