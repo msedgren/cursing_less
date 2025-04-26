@@ -9,7 +9,6 @@ import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
-import org.cursing_less.util.CARET_NUMBER_KEY
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -63,9 +62,6 @@ class CursingAddMultipleCursorsCommandTest {
         // Position the primary caret at the beginning of line1
         runInEdtAndWait {
             editor.caretModel.primaryCaret.moveToOffset(0)
-
-            // Set primary caret number for tests
-            editor.caretModel.primaryCaret.putUserData(CARET_NUMBER_KEY, 1)
         }
 
         // When we run the add multiple cursors command to add 2 cursors below
@@ -87,14 +83,6 @@ class CursingAddMultipleCursorsCommandTest {
         // and the carets should be at the beginning of lines 1, 2, and 3
         val expectedOffsets = listOf(0, 6, 12) // Beginning of lines 1, 2, and 3
         assertEquals(expectedOffsets, caretOffsets)
-
-        // and the carets should have numbers 1, 2, and 3
-        runInEdtAndWait {
-            val caretNumbers = editor.caretModel.allCarets
-                .mapNotNull { it.getUserData(CARET_NUMBER_KEY) }
-                .sorted()
-            assertEquals(listOf(1, 2, 3), caretNumbers)
-        }
     }
 
     @Test
@@ -120,9 +108,6 @@ class CursingAddMultipleCursorsCommandTest {
         // Position the primary caret at the beginning of line3
         runInEdtAndWait {
             editor.caretModel.primaryCaret.moveToOffset(12) // Beginning of line3
-
-            // Set primary caret number for tests
-            editor.caretModel.primaryCaret.putUserData(CARET_NUMBER_KEY, 1)
         }
 
         // When we run the add multiple cursors command to add 2 cursors above
@@ -144,13 +129,5 @@ class CursingAddMultipleCursorsCommandTest {
         // and the carets should be at the beginning of lines 1, 2, and 3
         val expectedOffsets = listOf(0, 6, 12) // Beginning of lines 1, 2, and 3
         assertEquals(expectedOffsets, caretOffsets)
-
-        // and the carets should have numbers 1, 2, and 3
-        runInEdtAndWait {
-            val caretNumbers = editor.caretModel.allCarets
-                .mapNotNull { it.getUserData(CARET_NUMBER_KEY) }
-                .sorted()
-            assertEquals(listOf(1, 2, 3), caretNumbers)
-        }
     }
 }

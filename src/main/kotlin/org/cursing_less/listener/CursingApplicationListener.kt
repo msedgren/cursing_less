@@ -90,14 +90,14 @@ class CursingApplicationListener : AppLifecycleListener {
             val leftHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT)
             actionManager.setActionHandler(
                 IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT,
-                CursingEditorActionHandler(leftHandler, CursingUserInteractionService.CursingUserDirection.LEFT)
+                CursingEditorActionHandler(leftHandler, CursingUserDirection.LEFT)
             )
 
             // Right arrow
             val rightHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT)
             actionManager.setActionHandler(
                 IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT,
-                CursingEditorActionHandler(rightHandler, CursingUserInteractionService.CursingUserDirection.RIGHT)
+                CursingEditorActionHandler(rightHandler, CursingUserDirection.RIGHT)
             )
         }
 

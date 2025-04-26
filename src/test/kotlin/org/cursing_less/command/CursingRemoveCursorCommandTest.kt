@@ -9,7 +9,6 @@ import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
-import org.cursing_less.util.CARET_NUMBER_KEY
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -53,16 +52,13 @@ class CursingRemoveCursorCommandTest {
         cursingMarkupService.updateCursingTokensNow(editor, 0)
 
         // Add two secondary carets
+        val offset1 = 4  // at 't' in "test"
+        val offset2 = 20 // at 'f' in "foo"
+        
         runInEdtAndWait { 
-            // Set primary caret number
-            editor.caretModel.primaryCaret.putUserData(CARET_NUMBER_KEY, 1)
-
-            val caret1 = editor.caretModel.addCaret(editor.offsetToVisualPosition(4)) // at 't' in "test"
-            val caret2 = editor.caretModel.addCaret(editor.offsetToVisualPosition(20)) // at 'f' in "foo"
-
-            // Set caret numbers
-            caret1?.putUserData(CARET_NUMBER_KEY, 2)
-            caret2?.putUserData(CARET_NUMBER_KEY, 3)
+            // Add secondary carets at specific positions
+            editor.caretModel.addCaret(editor.offsetToVisualPosition(offset1))
+            editor.caretModel.addCaret(editor.offsetToVisualPosition(offset2))
         }
 
         // Verify that we have 3 carets
@@ -72,7 +68,7 @@ class CursingRemoveCursorCommandTest {
         }
         assertEquals(3, initialCaretCount)
 
-        // When we run the remove cursor command with the number 2
+        // When we run the remove cursor command with the index 2 (second caret)
         val response = CursingRemoveCursorCommand.run(listOf("2"), project, editor)
 
         // then the response should be Okay
@@ -85,11 +81,15 @@ class CursingRemoveCursorCommandTest {
         }
         assertEquals(2, finalCaretCount)
 
-        // and the remaining carets should have numbers 1 and 3
+        // and the remaining carets should be at the expected positions
         runInEdtAndWait {
             val remainingCarets = editor.caretModel.allCarets
-            val caretNumbers = remainingCarets.mapNotNull { it.getUserData(CARET_NUMBER_KEY) }.sorted()
-            assertEquals(listOf(1, 3), caretNumbers)
+            val caretOffsets = remainingCarets.map { it.offset }.sorted()
+            
+            // The primary caret is at position 0, and the caret at offset2 should remain
+            assertTrue(caretOffsets.contains(0))
+            assertTrue(caretOffsets.contains(offset2))
+            assertFalse(caretOffsets.contains(offset1))
         }
     }
 }

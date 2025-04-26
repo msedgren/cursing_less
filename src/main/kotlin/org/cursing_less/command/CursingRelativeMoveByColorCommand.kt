@@ -1,10 +1,8 @@
 package org.cursing_less.command
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationManager.getApplication
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,13 +20,16 @@ data object CursingRelativeMoveByColorCommand : VoiceCommand {
             val color = cursingColorShapeLookupService.parseColor(commandParameters[2])
 
             if (color != null) {
-                val consumedData = cursingColorShapeLookupService.findConsumed(color, next, editor)
-                if (consumedData != null) {
-                    withContext(Dispatchers.EDT) {
+                return withContext(Dispatchers.EDT) {
+                    val consumedData = cursingColorShapeLookupService.findConsumed(color, next, editor)
+                    if (consumedData != null) {
                         val offset = if (pre) consumedData.startOffset else consumedData.endOffset
                         editor.caretModel.moveToOffset(offset)
+                        CursingCommandService.OkayResponse
+                    } else {
+                        CursingCommandService.BadResponse
                     }
-                    return CursingCommandService.OkayResponse
+
                 }
             }
         }

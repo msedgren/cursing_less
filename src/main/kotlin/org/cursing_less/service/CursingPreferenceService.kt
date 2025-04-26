@@ -19,12 +19,12 @@ class CursingPreferenceService {
     )
 
     val shapes = listOf(
-        CursingShape.Circle(),
-        CursingShape.Square(),
-        CursingShape.Slash(),
-        CursingShape.BackSlash(),
-        CursingShape.Line(),
-        CursingShape.X()
+        CursingShape.Circle,
+        CursingShape.Square,
+        CursingShape.Slash,
+        CursingShape.BackSlash,
+        CursingShape.Line,
+        CursingShape.X
     )
 
     val codedColors = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }

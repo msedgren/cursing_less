@@ -14,8 +14,8 @@ class ColorAndShapeManagerTest  {
         CursingColor("2", JBColor.BLUE)
     )
     private val shapes = listOf(
-        CursingShape.Circle(),
-        CursingShape.Square()
+        CursingShape.Circle,
+        CursingShape.Square
     )
 
 

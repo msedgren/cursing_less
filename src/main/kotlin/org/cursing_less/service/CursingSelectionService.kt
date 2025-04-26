@@ -57,7 +57,7 @@ class CursingSelectionService {
         )
     }
 
-    suspend fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
         require(parameters.size == 3) { "Invalid parameters count: ${parameters.size}" }
         return find(
             parameters[0].toInt(),
@@ -68,7 +68,7 @@ class CursingSelectionService {
 
     }
 
-    suspend fun find(color: Int, shape: Int, character: Char?, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    fun find(color: Int, shape: Int, character: Char?, editor: Editor): ColorAndShapeManager.ConsumedData? {
         val cursingColorShapeLookupService = ApplicationManager.getApplication()
             .getService(CursingColorShapeLookupService::class.java)
         val colorShape =
@@ -87,7 +87,7 @@ class CursingSelectionService {
      * @param editor The editor to operate on
      * @return The consumed data if found, null otherwise
      */
-    suspend fun find(
+    fun find(
         colorShape: CursingColorShape,
         character: Char,
         editor: Editor

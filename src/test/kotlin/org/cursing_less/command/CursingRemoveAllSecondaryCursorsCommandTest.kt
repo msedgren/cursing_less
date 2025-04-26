@@ -9,7 +9,6 @@ import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
-import org.cursing_less.util.CARET_NUMBER_KEY
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -53,18 +52,18 @@ class CursingRemoveAllSecondaryCursorsCommandTest {
         cursingMarkupService.updateCursingTokensNow(editor, 0)
 
         // Add multiple secondary carets
+        val offset1 = 4  // at 't' in "test"
+        val offset2 = 9  // at 'h' in "this"
+        val offset3 = 20 // at 'f' in "foo"
+
         runInEdtAndWait { 
-            // Set primary caret number
-            editor.caretModel.primaryCaret.putUserData(CARET_NUMBER_KEY, 1)
+            // Position the primary caret at the beginning
+            editor.caretModel.primaryCaret.moveToOffset(0)
 
-            val caret1 = editor.caretModel.addCaret(editor.offsetToVisualPosition(4)) // at 't' in "test"
-            val caret2 = editor.caretModel.addCaret(editor.offsetToVisualPosition(9)) // at 'h' in "this"
-            val caret3 = editor.caretModel.addCaret(editor.offsetToVisualPosition(20)) // at 'f' in "foo"
-
-            // Set caret numbers
-            caret1?.putUserData(CARET_NUMBER_KEY, 2)
-            caret2?.putUserData(CARET_NUMBER_KEY, 3)
-            caret3?.putUserData(CARET_NUMBER_KEY, 4)
+            // Add secondary carets at specific positions
+            editor.caretModel.addCaret(editor.offsetToVisualPosition(offset1))
+            editor.caretModel.addCaret(editor.offsetToVisualPosition(offset2))
+            editor.caretModel.addCaret(editor.offsetToVisualPosition(offset3))
         }
 
         // Verify that we have 4 carets
@@ -82,19 +81,15 @@ class CursingRemoveAllSecondaryCursorsCommandTest {
 
         // and there should be only one caret left (the primary caret)
         var finalCaretCount = 0
+        var primaryCaretOffset = -1
         runInEdtAndWait { 
             finalCaretCount = editor.caretModel.caretCount
-
-            // Explicitly set the primary caret number to 1 for verification
-            editor.caretModel.primaryCaret.putUserData(CARET_NUMBER_KEY, 1)
+            primaryCaretOffset = editor.caretModel.primaryCaret.offset
         }
         assertEquals(1, finalCaretCount)
 
-        // and the remaining caret should be the primary caret with number 1
-        runInEdtAndWait {
-            val primaryCaret = editor.caretModel.primaryCaret
-            val caretNumber = primaryCaret.getUserData(CARET_NUMBER_KEY)
-            assertEquals(1, caretNumber)
-        }
+        // The remaining caret should be at one of the offsets we created
+        // In this case, it's at offset3 (20) which is the last caret we added
+        assertEquals(offset3, primaryCaretOffset)
     }
 }

@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.removeUserData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
@@ -20,14 +19,8 @@ data object CursingRemoveAllSecondaryCursorsCommand : VoiceCommand {
             return withContext(Dispatchers.EDT) {
                 // Check if there are secondary carets to remove
                 if (editor.caretModel.caretCount > 1) {
-                    // Store the primary caret's user data
-                    val primaryCaret = editor.caretModel.primaryCaret
-
                     // Remove all secondary carets
                     editor.caretModel.removeSecondaryCarets()
-
-                    // caret number not needed.
-                    primaryCaret.removeUserData(org.cursing_less.util.CARET_NUMBER_KEY)
 
                     // Update the markup to reflect the changes
                     val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
