@@ -35,11 +35,12 @@ class ColorAndShapeManager(
     fun consume(offset: Int, text: String): CursingColorShape? {
         require(text.isNotEmpty()) { "text must not be empty!" }
 
-        val character = text[0]
         if (consumed.contains(offset)) {
-            throw IllegalStateException("Attempted to consume at offset $offset but it has already been consumed!")
+            thisLogger().error("Attempted to consume at offset $offset but it has already been consumed!")
+            return null
         }
 
+        val character = text[0]
         val lowerCaseCharacter = character.lowercaseChar()
         // pull the object containing free colors and shapr for the given character
         val existing =
