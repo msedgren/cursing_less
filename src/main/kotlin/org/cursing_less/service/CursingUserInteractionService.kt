@@ -19,12 +19,4 @@ class CursingUserInteractionService {
     var direction: CursingDirectionState
         get() = directionAtomic.get()
         set(value) = directionAtomic.set(value)
-
-
-    enum class CursingUserDirection {
-        LEFT, RIGHT, NONE
-    }
-
-    data class CursingDirectionState(val direction: CursingUserDirection, val timeInMs: Long)
-
 }

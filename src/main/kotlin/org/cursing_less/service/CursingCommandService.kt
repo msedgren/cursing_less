@@ -74,9 +74,8 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
 
         /**
          * Generates a cryptographically secure random nonce.
-         * This function is stateless and does not modify any object state.
          *
-         * @return The generated nonce as a URL-safe Base64 string
+         * @return The generated nonce as a Base64 string
          */
         fun generateNonce(): String {
             val random = SecureRandom()
@@ -158,10 +157,10 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
 
             Thread.sleep(200)
 
-            thisLogger().info("Successfully sent shutdown command to existing service, response: $shutdownResponse")
+            thisLogger().debug("Successfully sent shutdown command to existing service, response: $shutdownResponse")
             return true
         } catch (e: Exception) {
-            thisLogger().info("Error sending shutdown command to existing service", e)
+            thisLogger().debug("Error sending shutdown command to existing service", e)
             return false
         }
     }
@@ -186,7 +185,7 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
             thisLogger().debug("Ping response: $responseBody")
             return responseBody == "ping"
         } catch (e: IOException) {
-            thisLogger().error("Failed to ping existing service", e)
+            thisLogger().debug("Failed to ping existing service", e)
             return false
         }
     }

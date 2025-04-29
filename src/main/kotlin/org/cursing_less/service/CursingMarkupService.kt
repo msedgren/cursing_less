@@ -5,32 +5,29 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.EditorCustomElementRenderer
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
-import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.*
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.endOffset
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
-import java.awt.Graphics
-import java.awt.Rectangle
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.Pair
 import com.intellij.psi.util.startOffset
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicLong
+import org.cursing_less.renderer.ColoredShapeRenderer
 import kotlin.math.abs
 
 typealias NextFunction = (PsiElement) -> PsiElement?
@@ -39,8 +36,9 @@ typealias VisibleChecker = (PsiElement) -> Boolean
 @Service(Service.Level.APP)
 class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
 
-    private val enabled = AtomicBoolean(true)
     private val debouncer = Debouncer(250, coroutineScope)
+    private val enabled = AtomicBoolean(true)
+
 
     companion object {
         private const val INLAY_NAME = "CURSING_INLAY"
@@ -52,7 +50,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         private val idGenerator = AtomicLong(0)
         private val mutex = Mutex()
     }
-
 
     override fun dispose() {
         enabled.set(false)
@@ -66,14 +63,13 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
     }
 
-    fun toggleEnabled() {
+    suspend fun toggleEnabled() {
         enabled.set(!enabled.get())
 
-        coroutineScope.launch(Dispatchers.EDT) {
+        withContext(Dispatchers.EDT) {
             EditorFactory.getInstance().allEditors.forEach { editor ->
                 if (enabled.get()) {
                     updateCursingTokens(editor, editor.caretModel.offset)
-
                 } else {
                     removeAllCursingTokens(editor)
                 }
@@ -104,7 +100,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     oldConsumedList.forEach { (inlay, consumedCursing) ->
                         if (inlay.isValid) {
                             val wanted = tokens[offset]
-                            if (found || wanted == null || wanted != consumedCursing) {
+                            if (found || wanted == null || wanted.second != consumedCursing) {
                                 inlay.dispose()
                             } else {
                                 inlay.repaint()
@@ -115,13 +111,20 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     }
                 }
 
-                tokens.forEach { (offset, cursingColorShape) ->
-                    addColoredShapeAboveCursingToken(editor, cursingColorShape, offset)
+                tokens.forEach { (offset, pair) ->
+                    addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
                 }
 
                 editor.contentComponent.repaint()
             }
         }
+    }
+
+    suspend fun processExistingWork() {
+        withContext(Dispatchers.EDT) {
+            debouncer.flush()
+        }
+        this.coroutineScope.coroutineContext.job.children.forEach { it.join() }
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
@@ -153,7 +156,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     private suspend fun pullExistingInlays(editor: Editor): List<Pair<Inlay<*>, CursingColorShape>> {
         return pullExistingInlaysByOffset(editor).values.toList().flatten()
-
     }
 
     private suspend fun pullExistingInlaysByOffset(editor: Editor): Map<Int, List<Pair<Inlay<*>, CursingColorShape>>> {
@@ -186,23 +188,25 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     private suspend fun findCursingTokens(
         editor: Editor, offset: Int, manager: ColorAndShapeManager
-    ): Map<Int, CursingColorShape> {
+    ): Map<Int, Pair<Char, CursingColorShape>> {
         val visibleArea = withContext(Dispatchers.EDT) { editor.calculateVisibleRange() }
         return readAction {
             val project = editor.project ?: ProjectManager.getInstance().defaultProject
             val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
-            val found = mutableMapOf<Int, CursingColorShape>()
+            val found = mutableMapOf<Int, Pair<Char, CursingColorShape>>()
             if (file != null) {
                 val elements = findVisibleElements(visibleArea, file)
+                val offsetComparator =
+                    OffsetDistanceComparator<Pair<PsiElement, String>>(offset) { it.first.startOffset }
                 val consumed = elements
                     .asSequence()
                     .filter { visibleArea.contains(it.startOffset) }
                     .map { Pair(it, it.text) }
                     .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
-                    .sortedWith { a, b -> abs(offset - a.first.startOffset) - abs(offset - b.first.startOffset) }
+                    .sortedWith(offsetComparator)
                     .mapNotNull { (element, text) ->
-                        manager.consume(text[0], element.startOffset, element.endOffset)?.let {
-                            Pair(element.startOffset, it)
+                        manager.consume(element.startOffset, text)?.let {
+                            Pair(element.startOffset, Pair(text[0], it))
                         }
                     }
 
@@ -234,16 +238,15 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         alreadyKnown: Set<Int>,
         text: String,
         visibleArea: ProperTextRange
-    ): List<Pair<Int, CursingColorShape>> {
+    ): List<Pair<Int, Pair<Char, CursingColorShape>>> {
         val tokens = findAllCursingTokensWithin(text, visibleArea.startOffset)
+        val offsetComparator = OffsetDistanceComparator<CursingToken>(currentOffset) { it.startOffset }
         return tokens
             .filterNot { alreadyKnown.contains(it.startOffset) }
-            .sortedWith { a, b ->
-                abs(currentOffset - a.startOffset) - abs(currentOffset - b.startOffset)
-            }
+            .sortedWith(offsetComparator)
             .mapNotNull {
-                colorAndShapeManager.consume(it.text[0], it.startOffset, it.endOffset)?.let { consumed ->
-                    Pair(it.startOffset, consumed)
+                colorAndShapeManager.consume(it.startOffset, it.text)?.let { consumed ->
+                    Pair(it.startOffset, Pair(text[0], consumed))
                 }
             }.toList()
     }
@@ -257,28 +260,27 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     private fun addColoredShapeAboveCursingToken(
-        editor: Editor, cursingColorShape: CursingColorShape, offset: Int
+        editor: Editor, cursingColorShape: CursingColorShape, offset: Int, character: Char
     ) {
-        editor.inlayModel.addInlineElement(offset, true, Int.MIN_VALUE, ColoredShapeRenderer(cursingColorShape))
+        val renderer = ColoredShapeRenderer(cursingColorShape, character, offset)
+
+        editor.inlayModel.addInlineElement(offset, false, Int.MIN_VALUE, renderer)
             ?.putUserData(INLAY_KEY, cursingColorShape)
     }
 
 
-    class ColoredShapeRenderer(
-        private val cursingColorShape: CursingColorShape
-    ) : EditorCustomElementRenderer {
+    data class CursingToken(val startOffset: Int, val endOffset: Int, val text: String)
 
-        override fun calcWidthInPixels(inlay: Inlay<*>): Int {
-            return 1
-        }
-
-        override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
-            g.color = cursingColorShape.color.color
-            cursingColorShape.shape.paint(inlay, g, targetRegion, textAttributes)
+    /**
+     * Comparator for sorting elements based on their distance from a reference offset.
+     * Elements closer to the reference offset will be ranked higher.
+     */
+    class OffsetDistanceComparator<T>(private val offset: Int, private val offsetExtractor: (T) -> Int) :
+        Comparator<T> {
+        override fun compare(a: T, b: T): Int {
+            return abs(offset - offsetExtractor(a)) - abs(offset - offsetExtractor(b))
         }
     }
-
-    data class CursingToken(val startOffset: Int, val endOffset: Int, val text: String)
 
     class Debouncer(
         private val delay: Int,
@@ -311,6 +313,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     updateQueue.dispose()
                 }
             }
+        }
+
+        fun flush() {
+            updateQueue.flush()
         }
     }
 

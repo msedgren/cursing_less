@@ -14,8 +14,8 @@ class ColorAndShapeManagerTest  {
         CursingColor("2", JBColor.BLUE)
     )
     private val shapes = listOf(
-        CursingShape.Circle(),
-        CursingShape.Square()
+        CursingShape.Circle,
+        CursingShape.Square
     )
 
 
@@ -24,10 +24,10 @@ class ColorAndShapeManagerTest  {
         // given a color and shape manager
         val manager = ColorAndShapeManager(colors, shapes)
         // when we consume the 'a' character 4 times
-        val consumedOne = manager.consume('a', 0, 1)
-        val consumedTwo = manager.consume('a', 1, 2)
-        val consumedThree = manager.consume('a', 2, 3)
-        val consumedFour = manager.consume('a', 3, 4)
+        val consumedOne = manager.consume(0, "a")
+        val consumedTwo = manager.consume(1, "a")
+        val consumedThree = manager.consume(2, "a")
+        val consumedFour = manager.consume(3, "a#")
         // expect it worked for all
         assertNotNull(consumedOne)
         assertNotNull(consumedTwo)
@@ -37,10 +37,50 @@ class ColorAndShapeManagerTest  {
         val consumed = setOf(consumedOne!!, consumedTwo!!, consumedThree!!, consumedFour!!)
         assertEquals(4, consumed.size)
         // and we cannot consume the 'a' character again or the 'A'
-        assertNull(manager.consume('a', 4, 5))
-        assertNull(manager.consume('A', 4, 5))
+        assertNull(manager.consume(4, "a"))
+        assertNull(manager.consume(4, "A"))
         // bute we can consume the 'b' character
-        assertNotNull(manager.consume('b', 5, 6))
+        assertNotNull(manager.consume(5, "b"))
+    }
+
+    @Test
+    fun testConsumeWithStartOverlaps() {
+        // Given some imaginary text that we are pretending to navigate and mark
+        // "Let us remember how the sky went dark."
+        // and a manager
+        val manager = ColorAndShapeManager(colors, shapes)
+        // and we consume 'Let us remember'
+        manager.consume(0, "Let us remember")
+        // if we next consume remember
+        manager.consume(7, "remember")
+        // then it should shrink the first
+        val first = manager.consumedAtOffset(0)
+        assertNotNull(first)
+        assertEquals(ColorAndShapeManager.ConsumedData(first!!.colorShape, 0, "Let us", "Let us remember"), first)
+        // and the last should also be correct
+        val last = manager.consumedAtOffset(7)
+        assertNotNull(last)
+        assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 7, "remember"), last)
+    }
+
+    @Test
+    fun testConsumeWithEndOverlaps() {
+        // Given some imaginary text that we are pretending to navigate and mark
+        // "Let us remember how the sky went dark."
+        // and a manager
+        val manager = ColorAndShapeManager(colors, shapes)
+        // and we consume 'Let us remember'
+        manager.consume(24, "sky went dark.")
+        // if we next consume how the sky
+        manager.consume(16, "how the sky")
+        // then it should shrink the first
+        val first = manager.consumedAtOffset(24)
+        assertNotNull(first)
+        assertEquals(ColorAndShapeManager.ConsumedData(first!!.colorShape, 24, "sky went dark."), first)
+        // and the last should also be correct
+        val last = manager.consumedAtOffset(16)
+        assertNotNull(last)
+        assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 16, "how the", "how the sky"), last)
     }
     
 
@@ -50,7 +90,7 @@ class ColorAndShapeManagerTest  {
         val manager = ColorAndShapeManager(colors, shapes)
 
         // when we consume a 'c' character
-        val consumedOne = manager.consume('c', 0, 1)
+        val consumedOne = manager.consume(0, "c")
         // then it is consumed.
         assertNotNull(consumedOne) 
         assertNotNull(manager.find(consumedOne!!, 'c'))
@@ -63,7 +103,7 @@ class ColorAndShapeManagerTest  {
         assertNull(manager.consumedAtOffset(0))
         // and we can still consume 4 c characters
         (1..4).forEach {
-            assertNotNull(manager.consume('c', it, it + 1))
+            assertNotNull(manager.consume(it, "c"))
         }
 
     }   

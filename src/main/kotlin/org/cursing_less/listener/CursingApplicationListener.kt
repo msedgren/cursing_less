@@ -10,6 +10,9 @@ import com.intellij.openapi.editor.actionSystem.EditorActionManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.cursing_less.command.VoiceCommand
 import org.cursing_less.handler.CursingEditorActionHandler
@@ -27,7 +30,9 @@ class CursingApplicationListener : AppLifecycleListener {
 
     override fun appWillBeClosed(isRestart: Boolean) {
         thisLogger().info("shutting down cursing_less plugin")
-        handler.shutdown()
+        runBlocking {
+            handler.shutdown()
+        }
     }
 
     class StartupActivity : ProjectActivity {
@@ -38,29 +43,33 @@ class CursingApplicationListener : AppLifecycleListener {
 
     class StartupHandler {
         var initialized = AtomicBoolean(false)
+        val mutex = Mutex()
 
         suspend fun startup() {
-            if (!initialized.get()) {
-                val commandService = ApplicationManager.getApplication().getService(CursingCommandService::class.java)
-                thisLogger().info("app started initializing cursing_less plugin")
-                if (skipServer || commandService.startup()) {
-                    setupListeners()
+            mutex.withLock {
+                if (!initialized.get()) {
+                    val commandService =
+                        ApplicationManager.getApplication().getService(CursingCommandService::class.java)
+                    thisLogger().info("app started initializing cursing_less plugin")
+                    if (skipServer || commandService.startup()) {
+                        setupListeners()
 
-                    val cursingMarkupService =
-                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+                        val cursingMarkupService =
+                            ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
 
-                    withContext(Dispatchers.EDT) {
-                        EditorFactory.getInstance().allEditors.forEach { editor ->
-                            cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
+                        withContext(Dispatchers.EDT) {
+                            EditorFactory.getInstance().allEditors.forEach { editor ->
+                                cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
+                            }
                         }
+
+
+                        VoiceCommand::class.sealedSubclasses
+                            .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
+
+
+                        initialized.set(true)
                     }
-
-
-                    VoiceCommand::class.sealedSubclasses
-                        .forEach { thisLogger().info("Registered command handler for ${it.simpleName}") }
-
-
-                    initialized.set(true)
                 }
             }
         }
@@ -81,23 +90,26 @@ class CursingApplicationListener : AppLifecycleListener {
             val leftHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT)
             actionManager.setActionHandler(
                 IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT,
-                CursingEditorActionHandler(leftHandler, CursingUserInteractionService.CursingUserDirection.LEFT)
+                CursingEditorActionHandler(leftHandler, CursingUserDirection.LEFT)
             )
 
             // Right arrow
             val rightHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT)
             actionManager.setActionHandler(
                 IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT,
-                CursingEditorActionHandler(rightHandler, CursingUserInteractionService.CursingUserDirection.RIGHT)
+                CursingEditorActionHandler(rightHandler, CursingUserDirection.RIGHT)
             )
         }
 
-        fun shutdown() {
-            try {
-                val commandService = ApplicationManager.getApplication().getService(CursingCommandService::class.java)
-                commandService.shutdown()
-            } finally {
-                initialized.set(false)
+        suspend fun shutdown() {
+            mutex.withLock {
+                try {
+                    val commandService =
+                        ApplicationManager.getApplication().getService(CursingCommandService::class.java)
+                    commandService.shutdown()
+                } finally {
+                    initialized.set(false)
+                }
             }
         }
 
