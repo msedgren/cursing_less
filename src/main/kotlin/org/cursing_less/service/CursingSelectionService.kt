@@ -24,7 +24,7 @@ class CursingSelectionService {
             "select" -> handleSelect(startOffset, endOffset, editor)
             "copy" -> handleCopy(startOffset, endOffset, editor)
             "cut" -> handleCut(startOffset, endOffset, editor, project)
-            "clear" -> deleteText(startOffset, endOffset, editor, project)
+            "clear" -> handleClear(startOffset, endOffset, editor, project)
         }
     }
 
@@ -49,6 +49,16 @@ class CursingSelectionService {
     private suspend fun handleCut(startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
         select(startOffset, endOffset, editor)
         copySelectionToClipboard(editor)
+        deleteText(
+            startOffset,
+            endOffset,
+            editor,
+            project
+        )
+    }
+
+    private suspend fun handleClear(startOffset: Int, endOffset: Int, editor: Editor, project: Project) {
+        editor.caretModel.moveToOffset(endOffset)
         deleteText(
             startOffset,
             endOffset,
