@@ -18,7 +18,7 @@ data object FindCommand : VoiceCommand {
 
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
-        if(editor != null) {
+        if (editor != null) {
             withContext(Dispatchers.EDT) {
                 val document = editor.document
                 val selection = editor.selectionModel

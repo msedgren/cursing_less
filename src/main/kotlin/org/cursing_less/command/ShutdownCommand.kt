@@ -26,7 +26,7 @@ data object ShutdownCommand : VoiceCommand {
             }
         }
         updateQueue.queue(task)
-        
+
         return CursingCommandService.OkayResponse
     }
 }

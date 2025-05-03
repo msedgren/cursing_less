@@ -4,7 +4,9 @@ import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.ide.CopyPasteManager
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.PlatformTestUtil
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
@@ -12,10 +14,9 @@ import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -55,6 +56,9 @@ class CursingSelectCommandTest {
         val editor = codeInsightFixture.editor
         // and markup is present
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        runInEdtAndWait {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        }
         cursingMarkupService.updateCursingTokensNow(editor, 0)
         //and we can get the shape and color at offset 4 test
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, offset)
@@ -64,7 +68,8 @@ class CursingSelectCommandTest {
         val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
         val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
         // When we run the select command with the numbers and character
-        val response = CursingSelectCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "$character"), project, editor)
+        val response =
+            CursingSelectCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "$character"), project, editor)
         // then the response should be Okay
         assertEquals(CursingCommandService.OkayResponse, response)
         // and the correct text should be selected
@@ -178,9 +183,8 @@ class CursingSelectCommandTest {
             Arguments.of(32, 'f', "foo"),
             Arguments.of(35, '>', ">"),
 
-        )
+            )
     }
-
 
 
 }

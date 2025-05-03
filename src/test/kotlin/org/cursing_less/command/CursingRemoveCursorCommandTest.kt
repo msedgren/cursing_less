@@ -2,21 +2,18 @@ package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CursingRemoveCursorCommandTest {
 
     lateinit var projectTestFixture: IdeaProjectTestFixture
@@ -54,8 +51,8 @@ class CursingRemoveCursorCommandTest {
         // Add two secondary carets
         val offset1 = 4  // at 't' in "test"
         val offset2 = 20 // at 'f' in "foo"
-        
-        runInEdtAndWait { 
+
+        runInEdtAndWait {
             // Add secondary carets at specific positions
             editor.caretModel.addCaret(editor.offsetToVisualPosition(offset1))
             editor.caretModel.addCaret(editor.offsetToVisualPosition(offset2))
@@ -63,7 +60,7 @@ class CursingRemoveCursorCommandTest {
 
         // Verify that we have 3 carets
         var initialCaretCount = 0
-        runInEdtAndWait { 
+        runInEdtAndWait {
             initialCaretCount = editor.caretModel.caretCount
         }
         assertEquals(3, initialCaretCount)
@@ -76,7 +73,7 @@ class CursingRemoveCursorCommandTest {
 
         // and there should be one less caret
         var finalCaretCount = 0
-        runInEdtAndWait { 
+        runInEdtAndWait {
             finalCaretCount = editor.caretModel.caretCount
         }
         assertEquals(2, finalCaretCount)
@@ -85,7 +82,7 @@ class CursingRemoveCursorCommandTest {
         runInEdtAndWait {
             val remainingCarets = editor.caretModel.allCarets
             val caretOffsets = remainingCarets.map { it.offset }.sorted()
-            
+
             // The primary caret is at position 0, and the caret at offset2 should remain
             assertTrue(caretOffsets.contains(0))
             assertTrue(caretOffsets.contains(offset2))

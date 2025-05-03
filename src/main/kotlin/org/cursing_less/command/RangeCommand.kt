@@ -16,7 +16,7 @@ data object RangeCommand : VoiceCommand {
     override fun matches(command: String) = command == "range"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
-        if(editor != null) {
+        if (editor != null) {
             withContext(Dispatchers.EDT) {
                 val startLine = commandParameters[0].toInt() - 1
                 val endLine = commandParameters[1].toInt() - 1

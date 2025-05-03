@@ -31,7 +31,7 @@ data object ActionCommand : VoiceCommand {
     }
 
     private suspend fun actionShouldExecute(actionId: String, selectionModel: SelectionModel?): Boolean {
-     return readAction {
+        return readAction {
             actionId != "EditorCopy" || selectionModel == null || selectionModel.hasSelection()
         }
     }

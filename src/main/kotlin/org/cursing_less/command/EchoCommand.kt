@@ -1,13 +1,13 @@
 package org.cursing_less.command
 
+import com.intellij.openapi.application.ApplicationManager.getApplication
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.application.ApplicationManager.getApplication
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingPreferenceService
 
 @Suppress("unused")
-data object  EchoCommand : VoiceCommand {
+data object EchoCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "toggle_echo"
 

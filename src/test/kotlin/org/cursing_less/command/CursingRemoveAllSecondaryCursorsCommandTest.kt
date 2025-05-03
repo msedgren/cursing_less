@@ -2,21 +2,18 @@ package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CursingRemoveAllSecondaryCursorsCommandTest {
 
     lateinit var projectTestFixture: IdeaProjectTestFixture
@@ -56,7 +53,7 @@ class CursingRemoveAllSecondaryCursorsCommandTest {
         val offset2 = 9  // at 'h' in "this"
         val offset3 = 20 // at 'f' in "foo"
 
-        runInEdtAndWait { 
+        runInEdtAndWait {
             // Position the primary caret at the beginning
             editor.caretModel.primaryCaret.moveToOffset(0)
 
@@ -68,7 +65,7 @@ class CursingRemoveAllSecondaryCursorsCommandTest {
 
         // Verify that we have 4 carets
         var initialCaretCount = 0
-        runInEdtAndWait { 
+        runInEdtAndWait {
             initialCaretCount = editor.caretModel.caretCount
         }
         assertEquals(4, initialCaretCount)
@@ -82,7 +79,7 @@ class CursingRemoveAllSecondaryCursorsCommandTest {
         // and there should be only one caret left (the primary caret)
         var finalCaretCount = 0
         var primaryCaretOffset = -1
-        runInEdtAndWait { 
+        runInEdtAndWait {
             finalCaretCount = editor.caretModel.caretCount
             primaryCaretOffset = editor.caretModel.primaryCaret.offset
         }

@@ -3,7 +3,8 @@ package org.cursing_less.command
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
@@ -11,12 +12,10 @@ import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CursingAddCursorCommandTest {
 
     lateinit var projectTestFixture: IdeaProjectTestFixture
@@ -50,35 +49,36 @@ class CursingAddCursorCommandTest {
         // and markup is present
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         cursingMarkupService.updateCursingTokensNow(editor, 0)
-        
+
         // and we can get the shape and color at offset 4 (test)
         val offset = 4
         val character = 't'
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, offset)
         assertNotNull(colorAndShape)
-        
+
         // map to numbers
         val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
         val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
         val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
-        
+
         // When we run the add cursor command with the numbers and character
-        val response = CursingAddCursorCommand.run(listOf("$colorNumber", "$shapeNumber", "$character"), project, editor)
-        
+        val response =
+            CursingAddCursorCommand.run(listOf("$colorNumber", "$shapeNumber", "$character"), project, editor)
+
         // then the response should be Okay
         assertEquals(CursingCommandService.OkayResponse, response)
-        
+
         // and there should be a secondary caret at the expected position
         var caretCount = 0
         var caretOffset = 0
-        runInEdtAndWait { 
+        runInEdtAndWait {
             caretCount = editor.caretModel.caretCount
             // Get the offset of the last added caret
             if (caretCount > 1) {
                 caretOffset = editor.caretModel.allCarets.last().offset
             }
         }
-        
+
         // Verify that a secondary caret was added
         assertEquals(2, caretCount)
         // Verify that the caret is at the expected position

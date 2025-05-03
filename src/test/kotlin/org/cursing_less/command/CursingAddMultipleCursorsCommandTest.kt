@@ -2,21 +2,18 @@ package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CursingAddMultipleCursorsCommandTest {
 
     lateinit var projectTestFixture: IdeaProjectTestFixture
@@ -73,7 +70,7 @@ class CursingAddMultipleCursorsCommandTest {
         // and there should be 3 carets in total (primary + 2 new ones)
         var caretCount = 0
         var caretOffsets = listOf<Int>()
-        runInEdtAndWait { 
+        runInEdtAndWait {
             caretCount = editor.caretModel.caretCount
             caretOffsets = editor.caretModel.allCarets.map { it.offset }.sorted()
         }
@@ -119,7 +116,7 @@ class CursingAddMultipleCursorsCommandTest {
         // and there should be 3 carets in total (primary + 2 new ones)
         var caretCount = 0
         var caretOffsets = listOf<Int>()
-        runInEdtAndWait { 
+        runInEdtAndWait {
             caretCount = editor.caretModel.caretCount
             caretOffsets = editor.caretModel.allCarets.map { it.offset }.sorted()
         }

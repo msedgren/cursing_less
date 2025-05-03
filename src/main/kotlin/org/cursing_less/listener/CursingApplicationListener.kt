@@ -80,10 +80,22 @@ class CursingApplicationListener : AppLifecycleListener {
             val cursingScopeService =
                 ApplicationManager.getApplication().getService(CursingScopeService::class.java)
 
-            eventMulticaster.addCaretListener(CursingCaretListener(cursingScopeService.coroutineScope), CursingPluginLifetimeDisposable.getInstance())
-            eventMulticaster.addVisibleAreaListener(CursingVisibleAreaListener(cursingScopeService.coroutineScope), CursingPluginLifetimeDisposable.getInstance())
-            eventMulticaster.addDocumentListener(CursingDocumentChangedListener(cursingScopeService.coroutineScope), CursingPluginLifetimeDisposable.getInstance())
-            eventMulticaster.addEditorMouseListener(CursingMouseListener(), CursingPluginLifetimeDisposable.getInstance())
+            eventMulticaster.addCaretListener(
+                CursingCaretListener(cursingScopeService.coroutineScope),
+                CursingPluginLifetimeDisposable.getInstance()
+            )
+            eventMulticaster.addVisibleAreaListener(
+                CursingVisibleAreaListener(cursingScopeService.coroutineScope),
+                CursingPluginLifetimeDisposable.getInstance()
+            )
+            eventMulticaster.addDocumentListener(
+                CursingDocumentChangedListener(cursingScopeService.coroutineScope),
+                CursingPluginLifetimeDisposable.getInstance()
+            )
+            eventMulticaster.addEditorMouseListener(
+                CursingMouseListener(),
+                CursingPluginLifetimeDisposable.getInstance()
+            )
 
             val actionManager = EditorActionManager.getInstance()
             // Left arrow

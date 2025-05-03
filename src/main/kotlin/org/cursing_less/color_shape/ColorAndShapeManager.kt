@@ -1,12 +1,10 @@
 package org.cursing_less.color_shape
 
 import com.intellij.openapi.diagnostic.thisLogger
-import java.util.stream.Collectors
 import com.intellij.openapi.util.Key
 import com.jetbrains.rd.util.firstOrNull
 import org.cursing_less.util.OffsetDistanceComparator
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
+import java.util.stream.Collectors
 
 class ColorAndShapeManager(
     colors: Collection<CursingColor>,
@@ -59,14 +57,20 @@ class ColorAndShapeManager(
                 //done here so we don't need to loop twice.
                 val endOffsetOverlaps = currentEnd >= it.value.startOffset && currentEnd < it.value.endOffset
                 if (endOffsetOverlaps && !startOffsetOverlaps) {
-                    textToConsume = textToConsume.substring(0, textToConsume.length - (currentEnd - it.value.startOffset)).trimEnd()
+                    textToConsume =
+                        textToConsume.substring(0, textToConsume.length - (currentEnd - it.value.startOffset)).trimEnd()
                 }
                 if (startOffsetOverlaps) {
                     if (endOffsetOverlaps) {
                         textToConsume = textToConsume +
-                                it.value.consumedText.substring(currentEnd - it.value.startOffset,  it.value.consumedText.length).trimEnd()
+                                it.value.consumedText.substring(
+                                    currentEnd - it.value.startOffset,
+                                    it.value.consumedText.length
+                                ).trimEnd()
                     }
-                    it.value.copy(consumedText = it.value.consumedText.substring(0, offset - it.value.startOffset).trimEnd())
+                    it.value.copy(
+                        consumedText = it.value.consumedText.substring(0, offset - it.value.startOffset).trimEnd()
+                    )
                 } else {
                     it.value
                 }

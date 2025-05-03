@@ -49,7 +49,7 @@ class ColoredShapeRenderer(
                 .filter { it.getUserData(INLAY_KEY) == null }
                 .map { it.widthInPixels }
                 .firstOrNull() ?: 0
-        val adjustedX = if(existingInlayWidth > 0) {
+        val adjustedX = if (existingInlayWidth > 0) {
             // Instead of directly using offsetToXY
             val logicalPos = editor.offsetToLogicalPosition(offset)
             val visualPos = editor.logicalToVisualPosition(logicalPos)

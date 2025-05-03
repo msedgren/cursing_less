@@ -10,8 +10,9 @@ import org.cursing_less.service.CursingDirectionState
 import org.cursing_less.service.CursingUserDirection
 import org.cursing_less.service.CursingUserInteractionService
 
-class CursingEditorActionHandler(private val originalHandler: EditorActionHandler,
-                                 private val direction: CursingUserDirection
+class CursingEditorActionHandler(
+    private val originalHandler: EditorActionHandler,
+    private val direction: CursingUserDirection
 ) : EditorActionHandler() {
 
     override fun doExecute(editor: Editor, caret: Caret?, dataContext: DataContext?) {

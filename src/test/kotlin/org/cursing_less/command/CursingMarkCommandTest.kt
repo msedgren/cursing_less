@@ -2,20 +2,18 @@ package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkStorageService
-import org.cursing_less.service.MarkedTextInfo
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CursingMarkCommandTest {
 
     lateinit var projectTestFixture: IdeaProjectTestFixture
@@ -57,7 +55,7 @@ class CursingMarkCommandTest {
         val expectedText = "test"
         val markNumber = 1
 
-        runInEdtAndWait { 
+        runInEdtAndWait {
             // Create a selection
             editor.selectionModel.setSelection(startOffset, endOffset)
         }
@@ -128,7 +126,7 @@ class CursingMarkCommandTest {
         val expectedText = "test"
         val defaultMarkNumber = 1
 
-        runInEdtAndWait { 
+        runInEdtAndWait {
             // and a selection
             editor.selectionModel.setSelection(startOffset, endOffset)
         }

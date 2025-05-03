@@ -43,7 +43,7 @@ class CursingColorShapeLookupServiceTest {
             codeInsightFixture.tearDown()
         }
     }
-    
+
     @Test
     fun itCanParseColorShape() {
         val firstParsed = lookupService.parseToColorShape(1, 1)
