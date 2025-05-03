@@ -12,8 +12,8 @@ import com.intellij.openapi.wm.ToolWindowManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
-import java.awt.datatransfer.StringSelection
 
+@Suppress("unused")
 data object ActionCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "action"

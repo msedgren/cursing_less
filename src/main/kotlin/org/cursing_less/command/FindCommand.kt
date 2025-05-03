@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 
+@Suppress("unused")
 data object FindCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "find"

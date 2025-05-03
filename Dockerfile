@@ -15,5 +15,5 @@ ENTRYPOINT ["./gradlew", "-t", "test"]
 
 FROM cursing_less_jdk AS build
 COPY --chown=$USER src ./src
-RUN --mount=type=cache,target=/home/jdk_user/.gradle,uid=1000,gid=1000,sharing=private,rw ./build_plugin.sh
+RUN --mount=type=cache,target=/home/jdk_user/.gradle,uid=1000,gid=1000,rw ./build_plugin.sh
 

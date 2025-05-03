@@ -1,15 +1,12 @@
 package org.cursing_less.command
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationManager.getApplication
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
-import org.cursing_less.service.CursingColorShapeLookupService
 import org.cursing_less.service.CursingSelectionService
 
 data object CursingMoveCommand : VoiceCommand {

@@ -10,6 +10,7 @@ import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
+import org.cursing_less.util.OffsetDistanceComparator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
@@ -71,7 +72,7 @@ class CursingMarkupServiceTest {
         val offset = 7
         
         // Identity function for extracting the offset from integers
-        val comparator = CursingMarkupService.OffsetDistanceComparator<Int>(offset) { it }
+        val comparator = OffsetDistanceComparator<Int>(offset) { it }
         
         // Sort using the comparator
         val sorted = items.sortedWith(comparator)
@@ -93,7 +94,7 @@ class CursingMarkupServiceTest {
         )
         
         // Test with cursor at offset 75
-        val comparator75 = CursingMarkupService.OffsetDistanceComparator<CursingMarkupService.CursingToken>(75) { it.startOffset }
+        val comparator75 = OffsetDistanceComparator<CursingMarkupService.CursingToken>(75) { it.startOffset }
         val sorted75 = tokens.sortedWith(comparator75)
         
         // Expected order based on distance from 75:

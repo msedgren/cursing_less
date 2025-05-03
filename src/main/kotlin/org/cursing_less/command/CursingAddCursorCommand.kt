@@ -1,6 +1,5 @@
 package org.cursing_less.command
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationManager.getApplication
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
@@ -34,7 +33,7 @@ data object CursingAddCursorCommand : VoiceCommand {
 
                     if (caret != null) {
                         // Update the markup to reflect the changes
-                        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+                        val cursingMarkupService = getApplication().getService(CursingMarkupService::class.java)
                         cursingMarkupService.updateCursingTokens(editor, offset)
                     }
                 }

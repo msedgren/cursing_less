@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingColorShapeLookupService
 import org.cursing_less.service.CursingCommandService
 
+@Suppress("unused")
 data object CursingRelativeMoveByColorCommand : VoiceCommand {
     override fun matches(command: String) = command == "curse_to_relative_location_by_color"
 

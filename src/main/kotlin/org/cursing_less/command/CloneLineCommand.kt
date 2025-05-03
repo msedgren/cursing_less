@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import org.cursing_less.service.CursingCommandService
 
+@Suppress("unused")
 data object CloneLineCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "clone"

@@ -1,15 +1,11 @@
 package org.cursing_less.service
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAndWriteAction
-import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
 
@@ -132,7 +128,8 @@ class CursingSelectionService {
     /**
      * Deletes the text.
      *
-     * @param consumedData The data describing the selection
+     * @param startOffset the beginning offset of the text to delete
+     * @param endOffset the ending offset of the text to delete
      * @param editor The editor to operate on
      * @param project The project context
      */

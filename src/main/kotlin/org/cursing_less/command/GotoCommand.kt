@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 import kotlin.math.max
 
+@Suppress("unused")
 data object GotoCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "goto"

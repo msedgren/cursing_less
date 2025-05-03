@@ -33,8 +33,7 @@ class CursingPreferenceService {
     val scale = 0.7
 
     val tokenPattern =
-        Regex("([\\w]+)|([0-9]+)|([\\(\\)]+)|([{}]+)|([<>]+)|([\\[\\]]+)|([^\\w_0-9\\(\\){}<>\\[\\]\\s\\.]+)")
-
+        Regex("([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.]+)")
 
     private val echoCommandsAtomic = AtomicBoolean(false)
 

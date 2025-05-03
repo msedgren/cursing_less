@@ -4,6 +4,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import org.apache.http.HttpStatus
 
+@Suppress("unused")
 data object LocationCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "location"

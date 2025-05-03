@@ -21,7 +21,6 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
 
     companion object {
         private const val MOVED_KEY_NAME = "CURSING_MOVED"
-        private const val TIME_IN_MS_FROM_LAST_MOVE = 200L
 
         val MOVED_KEY = Key.create<MoveDirection>(MOVED_KEY_NAME)
     }
@@ -30,7 +29,7 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
         coroutineScope.launch(Dispatchers.EDT) {
             val caret = event.caret
             val editor = event.editor
-            var moveDirection: MoveDirection? = null;
+            var moveDirection: MoveDirection? = null
             if (!editor.isDisposed && editor.getUserData(ColorAndShapeManager.KEY) != null && caret != null) {
                 val cursorOffset = caret.offset
                 if (event.newPosition.line == event.oldPosition.line && event.newPosition.column == event.oldPosition.column) {

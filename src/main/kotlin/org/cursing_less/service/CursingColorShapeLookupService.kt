@@ -22,10 +22,10 @@ class CursingColorShapeLookupService {
         val color = cursingPreferenceService.codedColors[colorToFind]
         val shape = cursingPreferenceService.codedShapes[shapeToFind]
 
-        if (color == null || shape == null) {
-            return null
+        return if (color == null || shape == null) {
+            null
         } else {
-            return CursingColorShape(color, shape)
+            CursingColorShape(color, shape)
         }
     }
 
@@ -42,7 +42,11 @@ class CursingColorShapeLookupService {
         return colorAndShapeManager?.find(color, next, editor.caretModel.offset)
     }
 
-    fun findConsumed(colorShape: CursingColorShape, character: Char, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    fun findConsumed(
+        colorShape: CursingColorShape,
+        character: Char,
+        editor: Editor
+    ): ColorAndShapeManager.ConsumedData? {
         val colorAndShapeManager = editor.getUserData(ColorAndShapeManager.KEY)
         return colorAndShapeManager?.find(colorShape, character)
     }
