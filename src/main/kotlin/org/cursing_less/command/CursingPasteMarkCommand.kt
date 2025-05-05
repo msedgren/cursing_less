@@ -104,7 +104,7 @@ data object CursingPasteMarkCommand : VoiceCommand {
      * @param caretData The list of caret data
      * @param markedText The text to insert
      */
-    private suspend fun insertTextAtCarets(
+    private fun insertTextAtCarets(
         project: Project,
         editor: Editor,
         caretData: List<CaretData>,

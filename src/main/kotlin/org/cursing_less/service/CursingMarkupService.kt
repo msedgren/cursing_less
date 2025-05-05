@@ -76,6 +76,19 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
     }
 
+    suspend fun fullyRefreshAllTokens() {
+        withContext(Dispatchers.EDT) {
+            // Get all open editors
+            val editors = EditorFactory.getInstance().allEditors
+
+            // Update each editor
+            for (editor in editors) {
+                // Remove the existing ColorAndShapeManager
+                editor.removeUserData(ColorAndShapeManager.KEY)
+                updateCursingTokens(editor, editor.caretModel.offset)
+            }
+        }
+    }
 
     suspend fun updateCursingTokens(editor: Editor, cursorOffset: Int) {
         debouncer.debounce("update", createAndSetId(editor), suspend {

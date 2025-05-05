@@ -12,6 +12,8 @@ import org.cursing_less.color_shape.CursingColorShape
 @Service(Service.Level.APP)
 class CursingSelectionService {
 
+    private val cursingColorShapeLookupService = ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
+
     /**
      * Handles the mode selection for cursing commands.
      */
@@ -65,20 +67,8 @@ class CursingSelectionService {
 
     fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
         require(parameters.size == 3) { "Invalid parameters count: ${parameters.size}" }
-        return find(
-            parameters[0].toInt(),
-            parameters[1].toInt(),
-            parameters[2].firstOrNull(),
-            editor
-        )
-
-    }
-
-    fun find(color: Int, shape: Int, character: Char?, editor: Editor): ColorAndShapeManager.ConsumedData? {
-        val cursingColorShapeLookupService = ApplicationManager.getApplication()
-            .getService(CursingColorShapeLookupService::class.java)
-        val colorShape =
-            cursingColorShapeLookupService.parseToColorShape(color, shape)
+        val colorShape = cursingColorShapeLookupService.parseToColorShape(parameters[0], parameters[1])
+        val character = parameters[2].firstOrNull()
 
         return colorShape?.let {
             character?.let { cursingColorShapeLookupService.findConsumed(colorShape, character, editor) }
@@ -98,9 +88,6 @@ class CursingSelectionService {
         character: Char,
         editor: Editor
     ): ColorAndShapeManager.ConsumedData? {
-        val cursingColorShapeLookupService = ApplicationManager.getApplication()
-            .getService(CursingColorShapeLookupService::class.java)
-
         return cursingColorShapeLookupService.findConsumed(colorShape, character, editor)
     }
 

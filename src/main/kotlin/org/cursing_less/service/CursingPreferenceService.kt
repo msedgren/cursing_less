@@ -1,47 +1,49 @@
 package org.cursing_less.service
 
 import com.intellij.openapi.components.Service
-import com.intellij.ui.JBColor
+import com.intellij.openapi.components.service
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
-import java.awt.Color
+import org.cursing_less.service.CursingPreferencePersistenceService
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service(Service.Level.APP)
 class CursingPreferenceService {
 
-    val colors = listOf(
-        CursingColor("red", JBColor.RED),
-        CursingColor("blue", JBColor.BLUE.brighter() as JBColor),
-        CursingColor("green", JBColor.GREEN),
-        CursingColor("yellow", JBColor(Color(255, 212, 0), Color(255, 212, 0))),
-        CursingColor("purple", JBColor(Color(191, 64, 191), Color(218, 112, 214)))
-    )
+    // Get the settings component instance
+    private val settingsComponent = service<CursingPreferencePersistenceService>()
 
-    val shapes = listOf(
-        CursingShape.Circle,
-        CursingShape.Square,
-        CursingShape.Slash,
-        CursingShape.BackSlash,
-        CursingShape.Line,
-        CursingShape.X
-    )
+    // Get colors from settings
+    val colors: List<CursingColor>
+        get() = settingsComponent.state.generateCursingColors()
 
-    val codedColors = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }
-    val codedShapes = shapes.withIndex().associateTo(mutableMapOf()) { Pair(encodeToShape(it.index + 1), it.value) }
+    // Get shapes from settings
+    val shapes: List<CursingShape>
+        get() = settingsComponent.state.generateCursingShapes()
 
-    val scale = 0.7
+    // Generate coded colors and shapes maps
+    val codedColors: MutableMap<String, CursingColor>
+        get() = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }
 
-    val tokenPattern =
-        Regex("([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.]+)")
+    val codedShapes: MutableMap<String, CursingShape>
+        get() = shapes.withIndex().associateTo(mutableMapOf()) { Pair(encodeToShape(it.index + 1), it.value) }
 
-    private val echoCommandsAtomic = AtomicBoolean(false)
+    // Get scale from settings
+    val scale: Double
+        get() = settingsComponent.state.scale
 
+    // Get token pattern from settings
+    val tokenPattern: Regex
+        get() = Regex(settingsComponent.state.tokenPattern)
+
+    // Get echo commands flag from settings
     val echoCommands: Boolean
-        get() = echoCommandsAtomic.get()
+        get() = settingsComponent.state.echoCommands
 
     fun encodeToColor(given: Int) = "color_$given"
     fun encodeToShape(given: Int) = "shape_$given"
+
+    private val echoCommandsAtomic = AtomicBoolean(false)
 
     fun toggleEchoCommands() {
         echoCommandsAtomic.set(!echoCommandsAtomic.get())
@@ -49,6 +51,4 @@ class CursingPreferenceService {
 
     fun mapToCode(color: CursingColor) = colors.indexOf(color) + 1
     fun mapToCode(shape: CursingShape) = shapes.indexOf(shape) + 1
-
-
 }

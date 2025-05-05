@@ -23,5 +23,11 @@
                              implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
         <editorActionHandler action="EditorBackSpace"
                              implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
+
+        <!-- Settings -->
+        <applicationConfigurable parentId="tools"
+                                 instance="org.cursing_less.settings.CursingPreferenceConfigurable"
+                                 id="org.cursing_less.settings.CursingPreferenceConfigurable"
+                                 displayName="Cursing Less"/>
     </extensions>
 </idea-plugin>
