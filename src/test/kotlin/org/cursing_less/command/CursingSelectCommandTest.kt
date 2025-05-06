@@ -56,10 +56,10 @@ class CursingSelectCommandTest {
         val editor = codeInsightFixture.editor
         // and markup is present
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
         runInEdtAndWait {
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
         }
-        cursingMarkupService.updateCursingTokensNow(editor, 0)
         //and we can get the shape and color at offset 4 test
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, offset)
         assertNotNull(colorAndShape)

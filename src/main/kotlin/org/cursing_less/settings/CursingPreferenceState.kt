@@ -3,6 +3,8 @@ package org.cursing_less.settings
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.DarculaColors
 import com.intellij.ui.JBColor
+import com.intellij.util.xmlb.Converter
+import com.intellij.util.xmlb.annotations.OptionTag
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
 import org.cursing_less.settings.CursingPreferenceState.ColorState.Companion.fromColors
@@ -14,11 +16,10 @@ import java.awt.Color
  * State class for storing Cursing Less plugin preferences.
  */
 data class CursingPreferenceState(
-    val colors: List<ColorState> = defaultColors,
-    val shapes: List<ShapeState> = defaultShapes,
-    val scale: Double = defaultScale,
-    val tokenPattern: String = defaultTokenPattern,
-    var echoCommands: Boolean = defaultEchoCommands
+    @JvmField @OptionTag(converter = ColorStateConverter::class) val colors: List<ColorState> = defaultColors,
+    @JvmField @OptionTag(converter = ShapeStateConverter::class) val shapes: List<ShapeState> = defaultShapes,
+    @JvmField val scale: Double = defaultScale,
+    @JvmField val tokenPattern: String = defaultTokenPattern
 ) {
 
     companion object {
@@ -40,8 +41,7 @@ data class CursingPreferenceState(
         )
         const val defaultScale: Double = 0.7
         const val defaultTokenPattern: String =
-            "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.]+)"
-        const val defaultEchoCommands: Boolean = false
+            "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
     }
 
     /**
@@ -53,7 +53,7 @@ data class CursingPreferenceState(
             .map {
                 CursingColor(
                     it.name,
-                    it.jbColor
+                    it.generateJbColor()
                 )
             }
     }
@@ -74,10 +74,15 @@ data class CursingPreferenceState(
     /**
      * State class for storing color information
      */
-    data class ColorState(val name: String, val enabled: Boolean, val lightColorHex: String, val darkColorHex: String) {
-        val lightColor: Color = ColorUtil.fromHex(lightColorHex)
-        val darkColor: Color = ColorUtil.fromHex(darkColorHex)
-        val jbColor: JBColor = JBColor(lightColor, darkColor)
+    data class ColorState(
+        @JvmField val name: String = "",
+        @JvmField val enabled: Boolean = false,
+        @JvmField val lightColorHex: String = "",
+        @JvmField val darkColorHex: String = ""
+    ) {
+        fun generateLightColor(): Color = ColorUtil.fromHex(lightColorHex)
+        fun generateDarkColor(): Color = ColorUtil.fromHex(darkColorHex)
+        fun generateJbColor(): JBColor = JBColor(generateLightColor(), generateDarkColor())
 
         companion object {
             fun fromColors(name: String, enabled: Boolean, lightColor: Color, darkColor: Color): ColorState {
@@ -86,14 +91,41 @@ data class CursingPreferenceState(
         }
     }
 
+    class ColorStateConverter: Converter<List<ColorState>>() {
+        override fun fromString(value: String): List<ColorState>? {
+            return value.split(" ")
+                .chunked(4)
+                .map { ColorState(it[0], it[1].toBooleanStrict(), it[2], it[3]) }
+        }
+
+        override fun toString(value: List<ColorState>) =
+            value.joinToString(" ") { "${it.name} ${it.enabled} ${it.lightColorHex} ${it.darkColorHex}" }
+
+    }
+
     /**
      * State class for storing shape information
      */
-    data class ShapeState(val name: String, val enabled: Boolean) {
+    data class ShapeState(
+        @JvmField val name: String = "",
+        @JvmField val enabled: Boolean = false
+    ) {
         companion object {
             fun fromShape(shape: CursingShape, enabled: Boolean): ShapeState {
                 return ShapeState(shape.name, enabled)
             }
+        }
+    }
+
+    class ShapeStateConverter: Converter<List<ShapeState>>() {
+        override fun toString(value: List<ShapeState>): String? {
+            return value.joinToString(" ") { "${it.name} ${it.enabled}" }
+        }
+
+        override fun fromString(value: String): List<ShapeState>? {
+            return value.split(" ")
+                .chunked(2)
+                .map { ShapeState(it[0], it[1].toBooleanStrict()) }
         }
     }
 }

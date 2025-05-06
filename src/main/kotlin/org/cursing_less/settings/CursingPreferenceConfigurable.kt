@@ -13,9 +13,9 @@ import javax.swing.JComponent
  * This class provides the UI for the settings and handles the interaction with the settings component.
  */
 class CursingPreferenceConfigurable : Configurable {
-    
+
     private var mySettingsComponent: CursingPreferenceSettingsPanel? = null
-    
+
     // Get the settings component instance
     private val settings =ApplicationManager.getApplication().getService(CursingPreferencePersistenceService::class.java)
     private val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
@@ -24,30 +24,30 @@ class CursingPreferenceConfigurable : Configurable {
     override fun getDisplayName(): String {
         return "Cursing Less"
     }
-    
+
     override fun createComponent(): JComponent {
         mySettingsComponent = CursingPreferenceSettingsPanel(settings.state)
         return mySettingsComponent!!.panel
     }
-    
+
     override fun isModified(): Boolean {
         // Check if any settings have been modified
         return mySettingsComponent?.isModified(settings.state) ?: false
     }
-    
+
     override fun apply() {
         // Apply changes from the UI to the settings
-        settings.loadState(mySettingsComponent?.generateUpdatedState() ?: CursingPreferenceState())
+        settings.update(mySettingsComponent?.generateUpdatedState() ?: CursingPreferenceState())
         scopeService.coroutineScope.launch {
             markupService.fullyRefreshAllTokens()
         }
     }
-    
+
     override fun reset() {
         // Reset UI to match current settings
         mySettingsComponent?.load(settings.state)
     }
-    
+
     override fun disposeUIResources() {
         mySettingsComponent = null
     }

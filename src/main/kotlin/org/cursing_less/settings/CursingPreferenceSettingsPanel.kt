@@ -9,6 +9,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.Align
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBUI
+import org.cursing_less.MyBundle
 import java.awt.*
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -58,12 +59,12 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
             addCheckbox(gbc, panel, 0, 1.0, checkbox)
 
             // Add light mode label and panel
-            addColorLabel(gbc, panel, 1, "Light Mode:")
+            addColorLabel(gbc, panel, 1, MyBundle.message("cursing_less.settings.label.light_mode"))
             addColorPanel(gbc, panel, 2, lightColorPanel, lightColor)
 
 
             // Add dark color label and panel
-            addColorLabel(gbc, panel, 3, "Dark Mode:")
+            addColorLabel(gbc, panel, 3, MyBundle.message("cursing_less.settings.label.dark_mode"))
             addColorPanel(gbc, panel, 4, darkColorPanel, darkColor)
         }
 
@@ -125,22 +126,22 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
     private fun setupUI() {
         // Create the main panel using IntelliJ's UI DSL
         val mainPanel = panel {
-            group("Colors") {
+            group(MyBundle.message("cursing_less.settings.group.colors")) {
                 buildEditColorUi()
                 buildNewColorUi()
             }
 
-            group("Shapes") {
+            group(MyBundle.message("cursing_less.settings.group.shapes")) {
                 buildShapesUi()
             }
 
-            group("Other Settings") {
+            group(MyBundle.message("cursing_less.settings.group.other")) {
                 buildScaleUi()
                 buildTokenUi()
             }
 
             row {
-                button("Restore Defaults") {
+                button(MyBundle.message("cursing_less.settings.button.restore_defaults")) {
                     resetToDefaults()
                 }
             }
@@ -156,29 +157,29 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
             cell(JBScrollPane(colorsPanel))
                 .align(Align.FILL)
                 .resizableColumn()
-                .comment("Enable or disable colors and edit their properties")
+                .comment(MyBundle.message("cursing_less.settings.comment.colors"))
         }
     }
 
     private fun com.intellij.ui.dsl.builder.Panel.buildNewColorUi() {
         row {
             // Add new color controls
-            label("Name:")
+            label(MyBundle.message("cursing_less.settings.label.name"))
             cell(newColorNameField)
                 .align(Align.FILL)
                 .resizableColumn()
-                .comment("Enter a name for the new color")
-            label("Light Mode:")
+                .comment(MyBundle.message("cursing_less.settings.comment.new_color_name"))
+            label(MyBundle.message("cursing_less.settings.label.light_mode"))
             cell(newLightColorPanel)
                 .align(Align.FILL)
-                .comment("Select a light mode color")
+                .comment(MyBundle.message("cursing_less.settings.comment.light_color"))
 
-            label("Dark Mode:")
+            label(MyBundle.message("cursing_less.settings.label.dark_mode"))
             cell(newDarkColorPanel)
                 .align(Align.FILL)
-                .comment("Select a dark mode color")
+                .comment(MyBundle.message("cursing_less.settings.comment.dark_color"))
 
-            button("Add Color") {
+            button(MyBundle.message("cursing_less.settings.button.add_color")) {
                 addColor()
             }
         }
@@ -194,24 +195,24 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
             }
             cell(shapesPanel)
                 .align(Align.FILL)
-                .comment("Enable or disable shapes")
+                .comment(MyBundle.message("cursing_less.settings.comment.shapes"))
         }
     }
 
     private fun com.intellij.ui.dsl.builder.Panel.buildScaleUi() {
-        row("Scale:") {
+        row(MyBundle.message("cursing_less.settings.label.scale")) {
             cell(scaleSpinner)
                 .align(Align.FILL)
-                .comment("Adjust the scale of the cursing marks")
+                .comment(MyBundle.message("cursing_less.settings.comment.scale"))
         }
     }
 
     private fun com.intellij.ui.dsl.builder.Panel.buildTokenUi() {
-        row("Token Pattern:") {
+        row(MyBundle.message("cursing_less.settings.label.token_pattern")) {
             cell(tokenPatternField)
                 .align(Align.FILL)
                 .resizableColumn()
-                .comment("Regular expression pattern for tokenizing text")
+                .comment(MyBundle.message("cursing_less.settings.comment.token_pattern"))
         }
     }
 
@@ -281,8 +282,8 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
             val colorItem = ColorItem(
                 colorState.name,
                 colorState.enabled,
-                colorState.lightColor,
-                colorState.darkColor
+                colorState.generateLightColor(),
+                colorState.generateDarkColor()
             )
             colorItems[colorState.name] = colorItem
             colorsPanel.add(colorItem.panel)

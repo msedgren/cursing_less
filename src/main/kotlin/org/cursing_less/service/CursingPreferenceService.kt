@@ -1,5 +1,6 @@
 package org.cursing_less.service
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import org.cursing_less.color_shape.CursingColor
@@ -11,7 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class CursingPreferenceService {
 
     // Get the settings component instance
-    private val settingsComponent = service<CursingPreferencePersistenceService>()
+    private val settingsComponent = ApplicationManager.getApplication()
+        .getService(CursingPreferencePersistenceService::class.java)
 
     // Get colors from settings
     val colors: List<CursingColor>
@@ -36,18 +38,18 @@ class CursingPreferenceService {
     val tokenPattern: Regex
         get() = Regex(settingsComponent.state.tokenPattern)
 
+    private val echoCommandsAtomic = AtomicBoolean(false)
+
     // Get echo commands flag from settings
     val echoCommands: Boolean
-        get() = settingsComponent.state.echoCommands
-
-    fun encodeToColor(given: Int) = "color_$given"
-    fun encodeToShape(given: Int) = "shape_$given"
-
-    private val echoCommandsAtomic = AtomicBoolean(false)
+        get() = echoCommandsAtomic.get()
 
     fun toggleEchoCommands() {
         echoCommandsAtomic.set(!echoCommandsAtomic.get())
     }
+
+    fun encodeToColor(given: Int) = "color_$given"
+    fun encodeToShape(given: Int) = "shape_$given"
 
     fun mapToCode(color: CursingColor) = colors.indexOf(color) + 1
     fun mapToCode(shape: CursingShape) = shapes.indexOf(shape) + 1

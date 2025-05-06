@@ -28,6 +28,6 @@
         <applicationConfigurable parentId="tools"
                                  instance="org.cursing_less.settings.CursingPreferenceConfigurable"
                                  id="org.cursing_less.settings.CursingPreferenceConfigurable"
-                                 displayName="Cursing Less"/>
+                                 key="cursing_less.settings.display_name"/>
     </extensions>
 </idea-plugin>
