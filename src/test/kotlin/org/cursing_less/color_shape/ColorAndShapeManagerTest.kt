@@ -1,16 +1,15 @@
 package org.cursing_less.color_shape
 
 import com.intellij.ui.JBColor
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 
-
-class ColorAndShapeManagerTest  {
+class ColorAndShapeManagerTest {
 
 
     private val colors = listOf(
-         CursingColor("red", JBColor.RED),
+        CursingColor("red", JBColor.RED),
         CursingColor("2", JBColor.BLUE)
     )
     private val shapes = listOf(
@@ -82,7 +81,7 @@ class ColorAndShapeManagerTest  {
         assertNotNull(last)
         assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 16, "how the", "how the sky"), last)
     }
-    
+
 
     @Test
     fun testFreeingConsumed() {
@@ -92,10 +91,10 @@ class ColorAndShapeManagerTest  {
         // when we consume a 'c' character
         val consumedOne = manager.consume(0, "c")
         // then it is consumed.
-        assertNotNull(consumedOne) 
+        assertNotNull(consumedOne)
         assertNotNull(manager.find(consumedOne!!, 'c'))
         assertNotNull(manager.consumedAtOffset(0))
-        
+
         // and when we free the consumed character
         manager.free(0)
         // then it is no longer consumed.
@@ -105,6 +104,29 @@ class ColorAndShapeManagerTest  {
         (1..4).forEach {
             assertNotNull(manager.consume(it, "c"))
         }
+    }
 
-    }   
+    @Test
+    fun testFind() {
+        // given a color and shape manager
+        val color = CursingColor("red", JBColor.RED)
+        val manager = ColorAndShapeManager(listOf(color), shapes)
+        // and we consumed stuff at certain offsets.
+        manager.consume(439, "Let us remember how the sky went dark.")
+        manager.consume(567, "Other text")
+        manager.consume(573, "text Yet Other random text")
+        manager.consume(578, "Yet Other random text")
+        // expect we can find the correct next and previous offsets
+        assertEquals(578, manager.find(color, false, 600)?.startOffset)
+        assertEquals(573, manager.find(color, false, 578)?.startOffset)
+        assertEquals(567, manager.find(color, false, 573)?.startOffset)
+        assertEquals(439, manager.find(color, false, 567)?.startOffset)
+        assertNull(manager.find(color, false, 439))
+
+        assertEquals(439, manager.find(color, true, 400)?.startOffset)
+        assertEquals(567, manager.find(color, true, 439)?.startOffset)
+        assertEquals(573, manager.find(color, true, 567)?.startOffset)
+        assertEquals(578, manager.find(color, true, 573)?.startOffset)
+        assertNull(manager.find(color, true, 578))
+    }
 }

@@ -42,7 +42,7 @@ data object CursingAddMultipleCursorsCommand : VoiceCommand {
                         val lineEndOffset = document.getLineEndOffset(targetLine)
                         val lineStartOffset = document.getLineStartOffset(targetLine)
                         val lineLength = lineEndOffset - lineStartOffset
-                        if(lineLength >= currentPosition.column) {
+                        if (lineLength >= currentPosition.column) {
                             // Create a new logical position
                             val newPosition = LogicalPosition(targetLine, currentPosition.column)
 
@@ -52,7 +52,8 @@ data object CursingAddMultipleCursorsCommand : VoiceCommand {
                     }
 
                     // Update the markup to reflect the changes
-                    val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+                    val cursingMarkupService =
+                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
                     cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
                 }
                 return CursingCommandService.OkayResponse

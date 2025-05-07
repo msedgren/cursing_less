@@ -23,7 +23,8 @@ data object CursingRemoveAllSecondaryCursorsCommand : VoiceCommand {
                     editor.caretModel.removeSecondaryCarets()
 
                     // Update the markup to reflect the changes
-                    val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+                    val cursingMarkupService =
+                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
                     cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
                     CursingCommandService.OkayResponse
                 } else {

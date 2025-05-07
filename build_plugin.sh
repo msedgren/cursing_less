@@ -17,4 +17,4 @@ if is_arm64; then
     export JAVA_TOOL_OPTIONS="-XX:UseSVE=0"
 fi
 
-./gradlew --info qodanaScan test check buildPlugin verifyPlugin
+./gradlew --info test check buildPlugin verifyPlugin

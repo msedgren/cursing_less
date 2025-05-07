@@ -12,6 +12,7 @@ import org.cursing_less.service.CursingCommandService
 import kotlin.math.max
 import kotlin.math.min
 
+@Suppress("unused")
 data object ExtendCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "extend"

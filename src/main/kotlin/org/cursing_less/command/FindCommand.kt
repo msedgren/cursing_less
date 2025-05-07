@@ -11,13 +11,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 
+@Suppress("unused")
 data object FindCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "find"
 
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
-        if(editor != null) {
+        if (editor != null) {
             withContext(Dispatchers.EDT) {
                 val document = editor.document
                 val selection = editor.selectionModel

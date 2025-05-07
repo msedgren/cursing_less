@@ -11,12 +11,13 @@ import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 import kotlin.math.max
 
+@Suppress("unused")
 data object GotoCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "goto"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
-        if(editor != null) {
+        if (editor != null) {
             // Both count from 0, so adjust.
             val line = max((commandParameters[0].toInt() - 1).toDouble(), 0.0).toInt()
             val column = max((commandParameters[1].toInt() - 1).toDouble(), 0.0).toInt()

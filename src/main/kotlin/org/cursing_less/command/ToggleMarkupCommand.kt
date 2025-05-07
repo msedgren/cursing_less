@@ -1,6 +1,5 @@
 package org.cursing_less.command
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ApplicationManager.getApplication
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project

@@ -1,14 +1,13 @@
 package org.cursing_less.color_shape
 
 import com.intellij.openapi.diagnostic.thisLogger
-import java.util.stream.Collectors
 import com.intellij.openapi.util.Key
 import com.jetbrains.rd.util.firstOrNull
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
+import org.cursing_less.util.OffsetDistanceComparator
+import java.util.stream.Collectors
 
 class ColorAndShapeManager(
-    private val colors: Collection<CursingColor>,
+    colors: Collection<CursingColor>,
     private val shapes: Collection<CursingShape>
 ) {
 
@@ -58,14 +57,20 @@ class ColorAndShapeManager(
                 //done here so we don't need to loop twice.
                 val endOffsetOverlaps = currentEnd >= it.value.startOffset && currentEnd < it.value.endOffset
                 if (endOffsetOverlaps && !startOffsetOverlaps) {
-                    textToConsume = textToConsume.substring(0, textToConsume.length - (currentEnd - it.value.startOffset)).trimEnd()
+                    textToConsume =
+                        textToConsume.substring(0, textToConsume.length - (currentEnd - it.value.startOffset)).trimEnd()
                 }
                 if (startOffsetOverlaps) {
                     if (endOffsetOverlaps) {
                         textToConsume = textToConsume +
-                                it.value.consumedText.substring(currentEnd - it.value.startOffset,  it.value.consumedText.length).trimEnd()
+                                it.value.consumedText.substring(
+                                    currentEnd - it.value.startOffset,
+                                    it.value.consumedText.length
+                                ).trimEnd()
                     }
-                    it.value.copy(consumedText = it.value.consumedText.substring(0, offset - it.value.startOffset).trimEnd())
+                    it.value.copy(
+                        consumedText = it.value.consumedText.substring(0, offset - it.value.startOffset).trimEnd()
+                    )
                 } else {
                     it.value
                 }
@@ -93,24 +98,23 @@ class ColorAndShapeManager(
             if (previouslyConsumed != null) {
                 previouslyConsumed.returnFreed(freed.colorShape)
             } else {
-                thisLogger().error("unable to free element at offset ${offset} as there is no existing state there!")
+                thisLogger().error("unable to free element at offset $offset as there is no existing state there!")
             }
         } else {
-            thisLogger().error("unable to free element at offset ${offset}!")
+            thisLogger().error("unable to free element at offset $offset!")
         }
     }
 
     @Synchronized
     fun find(color: CursingColor, next: Boolean, offset: Int): ConsumedData? {
-        return consumed
-            .toSortedMap({ a, b ->
-                Math.abs(a - offset) - Math.abs(b - offset)
-            })
+        val foundOffset = consumed
             .filter { (consumedOffset, consumedData) ->
-                consumedData.colorShape.color == color && (next && consumedOffset > offset || !next && consumedOffset < offset)
+                consumedData.colorShape.color == color && ((next && consumedOffset > offset) || (!next && consumedOffset < offset))
             }
+            .toSortedMap(OffsetDistanceComparator(offset) { it })
             .firstOrNull()
-            ?.value
+
+        return foundOffset?.value
     }
 
     @Synchronized
@@ -147,14 +151,6 @@ class ColorAndShapeManager(
         val endOffset = startOffset + consumedText.length
     }
 
-
-    /**
-     * Represents a set of free [CursingColorShape]s.
-     *
-     * @property free The list of free [CursingColorShape]s.
-     */
-    @Suppress("unused")
-    private data class FreeCursingColorShapeState(val free: MutableList<CursingColorShape>) {}
     class FreeCursingColorShape(private val free: MutableList<CursingColorShape>) {
 
         init {

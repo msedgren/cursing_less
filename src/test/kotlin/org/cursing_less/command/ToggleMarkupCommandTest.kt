@@ -8,19 +8,19 @@ import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
+import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.cursing_less.listener.CursingApplicationListener
-import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ToggleMarkupCommandTest {
@@ -89,7 +89,11 @@ class ToggleMarkupCommandTest {
         assertEquals(initialInlayCount, inlays.size, "The number of inlays should be the same as initially")
     }
 
-    private suspend fun toggleMarkupAndWait(cursingMarkupService: CursingMarkupService, project: Project, editor: Editor) {
+    private suspend fun toggleMarkupAndWait(
+        cursingMarkupService: CursingMarkupService,
+        project: Project,
+        editor: Editor
+    ) {
         ToggleMarkupCommand.run(listOf(""), project, editor)
         cursingMarkupService.processExistingWork()
     }

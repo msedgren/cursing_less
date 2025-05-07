@@ -3,7 +3,8 @@ package org.cursing_less.util
 import com.intellij.openapi.editor.Editor
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
@@ -16,7 +17,7 @@ object CursingTestUtils {
 
     /**
      * Creates and sets up a CodeInsightTestFixture for testing.
-     * 
+     *
      * @return The configured CodeInsightTestFixture
      */
     fun setupTestFixture(): CodeInsightTestFixture {
@@ -33,7 +34,7 @@ object CursingTestUtils {
 
     /**
      * Tears down the provided CodeInsightTestFixture.
-     * 
+     *
      * @param codeInsightFixture The fixture to tear down
      */
     fun tearDownTestFixture(codeInsightFixture: CodeInsightTestFixture) {
@@ -44,7 +45,7 @@ object CursingTestUtils {
 
     /**
      * Gets the CursingColorShape at the specified offset in the editor.
-     * 
+     *
      * @param editor The editor to get the color shape from
      * @param offset The offset in the editor
      * @return The CursingColorShape at the specified offset, or null if not found

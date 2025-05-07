@@ -4,7 +4,8 @@ import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.ide.CopyPasteManager
-import com.intellij.testFramework.fixtures.*
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
@@ -63,7 +64,8 @@ class CursingSelectToCommandTest {
         val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the select_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response =
+            CursingSelectToCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)

@@ -8,33 +8,36 @@ import com.intellij.openapi.wm.IdeFocusManager
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingColorShape
+import org.cursing_less.color_shape.CursingShape
 import javax.swing.SwingUtilities
 
 @Service(Service.Level.APP)
 class CursingColorShapeLookupService {
 
-    fun parseToColorShape(colorString: Int, shapeString: Int): CursingColorShape? {
-        val cursingPreferenceService = ApplicationManager.getApplication()
-            .getService(CursingPreferenceService::class.java)
+    private val cursingPreferenceService = ApplicationManager.getApplication()
+        .getService(CursingPreferenceService::class.java)
 
-        val colorToFind = cursingPreferenceService.encodeToColor(colorString)
-        val shapeToFind = cursingPreferenceService.encodeToShape(shapeString)
-        val color = cursingPreferenceService.codedColors[colorToFind]
-        val shape = cursingPreferenceService.codedShapes[shapeToFind]
+    fun parseToColorShape(colorString: String, shapeString: String): CursingColorShape? {
+        val color = parseColor(colorString)
+        val shape = parseShape(shapeString)
 
-        if (color == null || shape == null) {
-            return null
+        return if (color == null || shape == null) {
+            null
         } else {
-            return CursingColorShape(color, shape)
+            CursingColorShape(color, shape)
         }
     }
 
     fun parseColor(colorString: String): CursingColor? {
-        val cursingPreferenceService = ApplicationManager.getApplication()
-            .getService(CursingPreferenceService::class.java)
+        return colorString.toIntOrNull()
+            ?.let { cursingPreferenceService.codedColors[cursingPreferenceService.encodeToColor(it)] }
+            ?: cursingPreferenceService.colors.find { it.name == colorString }
+    }
 
-        val colorToFind = cursingPreferenceService.encodeToColor(colorString.toInt())
-        return cursingPreferenceService.codedColors[colorToFind]
+    fun parseShape(shapeString: String): CursingShape? {
+        return shapeString.toIntOrNull()
+            ?.let { cursingPreferenceService.codedShapes[cursingPreferenceService.encodeToShape(it)] }
+            ?: cursingPreferenceService.shapes.find { it.name == shapeString }
     }
 
     fun findConsumed(color: CursingColor, next: Boolean, editor: Editor): ColorAndShapeManager.ConsumedData? {
@@ -42,7 +45,11 @@ class CursingColorShapeLookupService {
         return colorAndShapeManager?.find(color, next, editor.caretModel.offset)
     }
 
-    fun findConsumed(colorShape: CursingColorShape, character: Char, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    fun findConsumed(
+        colorShape: CursingColorShape,
+        character: Char,
+        editor: Editor
+    ): ColorAndShapeManager.ConsumedData? {
         val colorAndShapeManager = editor.getUserData(ColorAndShapeManager.KEY)
         return colorAndShapeManager?.find(colorShape, character)
     }

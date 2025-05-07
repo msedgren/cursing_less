@@ -1,20 +1,18 @@
 package org.cursing_less.service
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAndWriteAction
-import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
 
 @Service(Service.Level.APP)
 class CursingSelectionService {
+
+    private val cursingColorShapeLookupService = ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
 
     /**
      * Handles the mode selection for cursing commands.
@@ -69,20 +67,8 @@ class CursingSelectionService {
 
     fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
         require(parameters.size == 3) { "Invalid parameters count: ${parameters.size}" }
-        return find(
-            parameters[0].toInt(),
-            parameters[1].toInt(),
-            parameters[2].firstOrNull(),
-            editor
-        )
-
-    }
-
-    fun find(color: Int, shape: Int, character: Char?, editor: Editor): ColorAndShapeManager.ConsumedData? {
-        val cursingColorShapeLookupService = ApplicationManager.getApplication()
-            .getService(CursingColorShapeLookupService::class.java)
-        val colorShape =
-            cursingColorShapeLookupService.parseToColorShape(color, shape)
+        val colorShape = cursingColorShapeLookupService.parseToColorShape(parameters[0], parameters[1])
+        val character = parameters[2].firstOrNull()
 
         return colorShape?.let {
             character?.let { cursingColorShapeLookupService.findConsumed(colorShape, character, editor) }
@@ -102,9 +88,6 @@ class CursingSelectionService {
         character: Char,
         editor: Editor
     ): ColorAndShapeManager.ConsumedData? {
-        val cursingColorShapeLookupService = ApplicationManager.getApplication()
-            .getService(CursingColorShapeLookupService::class.java)
-
         return cursingColorShapeLookupService.findConsumed(colorShape, character, editor)
     }
 
@@ -132,7 +115,8 @@ class CursingSelectionService {
     /**
      * Deletes the text.
      *
-     * @param consumedData The data describing the selection
+     * @param startOffset the beginning offset of the text to delete
+     * @param endOffset the ending offset of the text to delete
      * @param editor The editor to operate on
      * @param project The project context
      */

@@ -287,8 +287,13 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
             val notification = NotificationGroupManager.getInstance()
                 .getNotificationGroup("cursing_less")
                 .createNotification(
-                    "Echo",
-                    "Processing request: ${httpExchange.requestMethod} ${httpExchange.requestURI} on port ${getPortForCurrentIde()}",
+                    MyBundle.message("cursing_less.notification.echo.title"),
+                    MyBundle.message(
+                        "cursing_less.notification.echo.content",
+                        httpExchange.requestMethod,
+                        httpExchange.requestURI,
+                        getPortForCurrentIde()
+                    ),
                     NotificationType.INFORMATION
                 )
             Notifications.Bus.notify(notification)

@@ -3,12 +3,12 @@ package org.cursing_less.command
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import org.apache.http.HttpStatus
-import org.cursing_less.service.CursingCommandService
 
 /**
  * Simple command to check if the service is alive.
  * Returns "ping" with an OK status code.
  */
+@Suppress("unused")
 data object PingCommand : VoiceCommand {
 
     override fun matches(command: String) = command == "ping"
