@@ -20,7 +20,7 @@ class CursingPreferenceConfigurable : Configurable {
     private val settings =ApplicationManager.getApplication().getService(CursingPreferencePersistenceService::class.java)
     private val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
     private val scopeService = ApplicationManager.getApplication().getService(CursingScopeService::class.java)
-    
+
     override fun getDisplayName(): String {
         return "Cursing Less"
     }

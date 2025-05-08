@@ -1,5 +1,6 @@
 package org.cursing_less.util
 
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
@@ -38,8 +39,12 @@ object CursingTestUtils {
      * @param codeInsightFixture The fixture to tear down
      */
     fun tearDownTestFixture(codeInsightFixture: CodeInsightTestFixture) {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
+        try {
+            runInEdtAndWait(true) {
+                codeInsightFixture.tearDown()
+            }
+        } catch (e: Exception) {
+            thisLogger().error("Failed to tear down test fixture", e)
         }
     }
 

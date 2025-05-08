@@ -36,6 +36,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     private val debouncer = Debouncer(250, coroutineScope)
     private val enabled = AtomicBoolean(true)
+    private val preferenceService = ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
 
 
     companion object {
@@ -98,7 +99,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int) {
         operationMutex.withLock {
-            if (enabled.get() && !editor.isDisposed) {
+            if (enabled.get() && !editor.isDisposed && editorEligibleForMarkup(editor)) {
                 // thisLogger().trace("Updating cursing tokens for ${editor.editorKind.name} with ID ${createAndSetId(editor)}")
                 val colorAndShapeManager = createAndSetColorAndShapeManager(editor)
                 colorAndShapeManager.freeAll()
@@ -139,6 +140,14 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             debouncer.flush()
         }
         this.coroutineScope.coroutineContext.job.children.forEach { it.join() }
+    }
+
+    private fun editorEligibleForMarkup(editor: Editor): Boolean {
+        val lineHeight = editor.lineHeight
+        val fontMetrics = editor.contentComponent.getFontMetrics(editor.colorsScheme.getFont(null))
+        val fontHeight = fontMetrics.height
+
+        return (lineHeight - fontHeight) >= 2
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
@@ -185,11 +194,9 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
 
     private suspend fun createAndSetColorAndShapeManager(editor: Editor): ColorAndShapeManager {
-        val cursingPreferenceService =
-            ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
         unsafeDataMutex.withLock {
             return editor.getOrCreateUserDataUnsafe(ColorAndShapeManager.KEY) {
-                ColorAndShapeManager(cursingPreferenceService.colors, cursingPreferenceService.shapes)
+                ColorAndShapeManager(preferenceService.colors, preferenceService.shapes)
             }
         }
     }
@@ -269,7 +276,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     private fun findAllCursingTokensWithin(text: String, startOffset: Int): List<CursingToken> {
-        val reg = ApplicationManager.getApplication().getService(CursingPreferenceService::class.java).tokenPattern
+        val reg = preferenceService.tokenPattern
 
         return reg.findAll(text).iterator().asSequence()
             .filter { it.value.isNotBlank() && !it.value[0].isWhitespace() }
