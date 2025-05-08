@@ -126,6 +126,14 @@ class ColorAndShapeManager(
             ?.value
     }
 
+    @Synchronized
+    fun findTokenContainingOffset(offset: Int): ConsumedData? {
+        return consumed
+            .filter { it.value.startOffset <= offset && offset < it.value.endOffset }
+            .firstOrNull()
+            ?.value
+    }
+
     /**
      * Generates a list of all possible [CursingColorShape]s in a random order.
      */
