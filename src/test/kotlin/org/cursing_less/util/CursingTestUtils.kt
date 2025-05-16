@@ -1,5 +1,6 @@
 package org.cursing_less.util
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.testFramework.LightProjectDescriptor
@@ -7,8 +8,10 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
+import kotlinx.coroutines.runBlocking
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
+import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 
 /**
@@ -40,6 +43,9 @@ object CursingTestUtils {
      */
     fun tearDownTestFixture(codeInsightFixture: CodeInsightTestFixture) {
         try {
+            runBlocking {
+                ApplicationManager.getApplication().getService(CursingMarkupService::class.java).processExistingWork()
+            }
             runInEdtAndWait(true) {
                 codeInsightFixture.tearDown()
             }

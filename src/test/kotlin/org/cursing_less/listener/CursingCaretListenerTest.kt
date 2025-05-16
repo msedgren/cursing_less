@@ -78,15 +78,15 @@ class CursingCaretListenerTest {
         codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
         val editor = codeInsightFixture.editor
 
-        // Create inlays using the CursingMarkupService
-        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-        cursingMarkupService.updateCursingTokensNow(editor, 0)
-
         // Initial caret position
         runInEdtAndWait {
             editor.caretModel.moveToOffset(0) // Position at 'b' in "<foo>bar</foo>"
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
         }
+
+        // Create inlays using the CursingMarkupService
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
 
         // Simulate a right arrow key press by moving the caret right (jiggle the handle by going left twice at zero which goes nowhere...)
         codeInsightFixture.performEditorAction("EditorLeft")

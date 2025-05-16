@@ -94,12 +94,25 @@ class ColorAndShapeManager(
     fun free(offset: Int) {
         val freed = consumed.remove(offset)
         if (freed != null) {
+            // Return the color shape to the free pool
             val previouslyConsumed = characterState[freed.characterConsumed.lowercaseChar()]
             if (previouslyConsumed != null) {
                 previouslyConsumed.returnFreed(freed.colorShape)
             } else {
                 thisLogger().error("unable to free element at offset $offset as there is no existing state there!")
             }
+
+            // Copy all existing consumed data to the new map
+            consumed = consumed.mapValues { (_, existingData) ->
+                val startOffsetOverlaps = offset >= existingData.startOffset && offset < existingData.originalEndOffset
+                if(startOffsetOverlaps) {
+                    val newLength = existingData.originalEndOffset.coerceAtMost(freed.endOffset) - existingData.startOffset
+                    existingData.copy(consumedText = existingData.originalText.substring(0, newLength))
+                } else {
+                    // No overlap, keep as is
+                    existingData
+                }
+            }.toMutableMap()
         } else {
             thisLogger().error("unable to free element at offset $offset!")
         }
@@ -135,6 +148,14 @@ class ColorAndShapeManager(
     }
 
     /**
+     * Returns a copy of all consumed data. Used for debugging purposes.
+     */
+    @Synchronized
+    fun getAllConsumed(): Map<Int, ConsumedData> {
+        return HashMap(consumed)
+    }
+
+    /**
      * Generates a list of all possible [CursingColorShape]s in a random order.
      */
     private fun generatePermutations(): MutableList<CursingColorShape> {
@@ -157,6 +178,7 @@ class ColorAndShapeManager(
         val character = consumedText[0]
         val characterConsumed = character.lowercaseChar()
         val endOffset = startOffset + consumedText.length
+        val originalEndOffset = startOffset + originalText.length
     }
 
     class FreeCursingColorShape(private val free: MutableList<CursingColorShape>) {

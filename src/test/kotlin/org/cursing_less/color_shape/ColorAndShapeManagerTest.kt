@@ -164,4 +164,62 @@ class ColorAndShapeManagerTest {
         assertNull(manager.findTokenContainingOffset(16)) // Between tokens
         assertNull(manager.findTokenContainingOffset(38)) // After last token
     }
+
+    @Test
+    fun testFreeWithStartOverlaps() {
+        // Given some imaginary text that we are pretending to navigate and mark
+        // "Let us remember how the sky went dark."
+        // and a manager
+        val manager = ColorAndShapeManager(colors, shapes)
+
+        // First consume "Let us remember"
+        manager.consume(0, "Let us remember")
+
+        // Then consume "remember" which will overlap with the first token
+        manager.consume(7, "remember")
+
+        // Verify the first token was truncated
+        val firstBeforeFree = manager.consumedAtOffset(0)
+        assertNotNull(firstBeforeFree)
+        assertEquals("Let us", firstBeforeFree?.consumedText)
+        assertEquals("Let us remember", firstBeforeFree?.originalText)
+
+        // Now free the second token
+        manager.free(7)
+
+        // Verify the first token is restored to its original text
+        val firstAfterFree = manager.consumedAtOffset(0)
+        assertNotNull(firstAfterFree)
+        assertEquals("Let us remember", firstAfterFree?.consumedText)
+        assertEquals("Let us remember", firstAfterFree?.originalText)
+    }
+
+    @Test
+    fun testFreeWithEndOverlaps() {
+        // Given some imaginary text that we are pretending to navigate and mark
+        // "Let us remember how the sky went dark."
+        // and a manager
+        val manager = ColorAndShapeManager(colors, shapes)
+
+        // First consume "sky went dark."
+        manager.consume(24, "sky went dark.")
+
+        // Then consume "how the sky" which will overlap with the first token
+        manager.consume(16, "how the sky")
+
+        // Verify the second token was truncated
+        val secondBeforeFree = manager.consumedAtOffset(16)
+        assertNotNull(secondBeforeFree)
+        assertEquals("how the", secondBeforeFree?.consumedText)
+        assertEquals("how the sky", secondBeforeFree?.originalText)
+
+        // Now free the first token
+        manager.free(24)
+
+        // Verify the second token is restored to its original text
+        val secondAfterFree = manager.consumedAtOffset(16)
+        assertNotNull(secondAfterFree)
+        assertEquals("how the sky", secondAfterFree?.consumedText)
+        assertEquals("how the sky", secondAfterFree?.originalText)
+    }
 }

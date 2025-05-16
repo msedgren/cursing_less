@@ -15,9 +15,11 @@ class CursingEditorActionHandler(
     private val direction: CursingUserDirection
 ) : EditorActionHandler() {
 
+    val userInteractionService: CursingUserInteractionService =
+        ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+
     override fun doExecute(editor: Editor, caret: Caret?, dataContext: DataContext?) {
-        val service = ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
-        service.direction = CursingDirectionState(direction, System.currentTimeMillis())
+        userInteractionService.direction = CursingDirectionState(direction, System.currentTimeMillis())
         originalHandler.execute(editor, caret, dataContext)
     }
 }

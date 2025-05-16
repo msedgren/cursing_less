@@ -125,11 +125,24 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                         }
                     }
 
+
+                    if(tokens.contains(cursorOffset)) {
+                        // exclude the current positon if there are multiple inlays to prevent
+                        // the current position from being removed when the caret moves
+                        val inlays = withContext(Dispatchers.EDT) {
+                            editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
+                        }
+                        if(inlays.isNotEmpty()) {
+                            colorAndShapeManager.free(cursorOffset)
+                            tokens.remove(cursorOffset)
+                        }
+                    }
+
                     tokens.forEach { (offset, pair) ->
                         addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
                     }
 
-                    editor.contentComponent.repaint()
+                     editor.contentComponent.repaint()
                 }
             }
         }

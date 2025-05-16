@@ -7,17 +7,18 @@ import org.cursing_less.service.CursingUserInteractionService
 
 class CursingMouseListener : EditorMouseListener {
 
+    private val cursingUserInteractionService = ApplicationManager.getApplication()
+        .getService(CursingUserInteractionService::class.java)
+
     override fun mousePressed(event: EditorMouseEvent) {
         if (event.mouseEvent.button == 1) {
-            ApplicationManager.getApplication()
-                .getService(CursingUserInteractionService::class.java).leftMouseSelected = true
+            cursingUserInteractionService.leftMouseSelected = true
         }
     }
 
     override fun mouseReleased(event: EditorMouseEvent) {
         if (event.mouseEvent.button == 1) {
-            ApplicationManager.getApplication()
-                .getService(CursingUserInteractionService::class.java).leftMouseSelected = false
+            cursingUserInteractionService.leftMouseSelected = false
         }
     }
 }
