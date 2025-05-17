@@ -15,8 +15,9 @@ class CursingEditorActionHandler(
     private val direction: CursingUserDirection
 ) : EditorActionHandler() {
 
-    val userInteractionService: CursingUserInteractionService =
+    private val userInteractionService: CursingUserInteractionService by lazy {
         ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+    }
 
     override fun doExecute(editor: Editor, caret: Caret?, dataContext: DataContext?) {
         userInteractionService.direction = CursingDirectionState(direction, System.currentTimeMillis())

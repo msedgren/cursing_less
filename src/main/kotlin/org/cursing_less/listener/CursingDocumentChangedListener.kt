@@ -14,11 +14,12 @@ import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.service.CursingUserInteractionService
 
 class CursingDocumentChangedListener(private val coroutineScope: CoroutineScope) : DocumentListener {
-
-    private val cursingUserInteractionService = ApplicationManager.getApplication()
-        .getService(CursingUserInteractionService::class.java)
-    private val cursingMarkupService =
+    private val cursingUserInteractionService by lazy {
+        ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+    }
+    private val cursingMarkupService by lazy {
         ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
 
     override fun beforeDocumentChange(event: DocumentEvent) {
         cursingUserInteractionService.direction = CursingDirectionState.NONE

@@ -42,20 +42,21 @@ class CursingApplicationListener : AppLifecycleListener {
     }
 
     class StartupHandler {
-        var initialized = AtomicBoolean(false)
-        val mutex = Mutex()
+        private val commandService: CursingCommandService by lazy {
+            ApplicationManager.getApplication().getService(CursingCommandService::class.java)
+        }
+        private val cursingMarkupService: CursingMarkupService by lazy {
+            ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        }
+        val initialized = AtomicBoolean(false)
+        private val mutex = Mutex()
 
         suspend fun startup() {
             mutex.withLock {
                 if (!initialized.get()) {
-                    val commandService =
-                        ApplicationManager.getApplication().getService(CursingCommandService::class.java)
                     thisLogger().info("app started initializing cursing_less plugin")
                     if (skipServer || commandService.startup()) {
                         setupListeners()
-
-                        val cursingMarkupService =
-                            ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
 
                         withContext(Dispatchers.EDT) {
                             EditorFactory.getInstance().allEditors.forEach { editor ->

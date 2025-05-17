@@ -18,6 +18,10 @@ class ColoredShapeRenderer(
     private val offset: Int,
 ) : EditorCustomElementRenderer {
 
+    private val preferenceService: CursingPreferenceService by lazy {
+        ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
+    }
+
     fun calculateSpace(inlay: Inlay<*>, character: Char): Int {
         val textMetrics =
             inlay.editor.contentComponent.getFontMetrics(inlay.editor.colorsScheme.getFont(EditorFontType.PLAIN))
@@ -38,7 +42,6 @@ class ColoredShapeRenderer(
             CursingShape.Square -> PaintableSquare
             CursingShape.X -> PaintableX
         }
-        val preferenceService = ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
 
         val characterWidth = calculateSpace(inlay, character)
         val widthToUse = (characterWidth * preferenceService.scale).toInt()

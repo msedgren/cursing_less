@@ -12,6 +12,10 @@ import org.cursing_less.service.CursingMarkStorageService
  */
 data object CursingRemoveMarkCommand : VoiceCommand {
 
+    private val markStorageService: CursingMarkStorageService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_remove_mark"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -25,9 +29,6 @@ data object CursingRemoveMarkCommand : VoiceCommand {
         if (markNumber == null || markNumber <= 0) {
             return CursingCommandService.BadResponse
         }
-
-        // Get the mark storage service
-        val markStorageService = ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
 
         // Check if the mark exists
         if (markStorageService.getMarkedText(markNumber) == null) {

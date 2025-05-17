@@ -12,7 +12,9 @@ import org.cursing_less.color_shape.CursingColorShape
 @Service(Service.Level.APP)
 class CursingSelectionService {
 
-    private val cursingColorShapeLookupService = ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
+    private val cursingColorShapeLookupService: CursingColorShapeLookupService by lazy {
+        ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
+    }
 
     /**
      * Handles the mode selection for cursing commands.

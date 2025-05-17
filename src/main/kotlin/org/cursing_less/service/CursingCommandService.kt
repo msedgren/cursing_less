@@ -41,6 +41,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Service(Service.Level.APP)
 class CursingCommandService(private val coroutineScope: CoroutineScope) : Disposable {
 
+    private val preferenceService: CursingPreferenceService by lazy {
+        ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
+    }
+    private val voiceCommandParserService: VoiceCommandParserService by lazy {
+        ApplicationManager.getApplication().getService(VoiceCommandParserService::class.java)
+    }
+    private val colorShapeLookupService: CursingColorShapeLookupService by lazy {
+        ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
+    }
     private var pathToNonce: Path? = null
     private var server: HttpServer? = null
     private var initialized = AtomicBoolean(false)
@@ -282,7 +291,6 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     private fun echoAndLog(httpExchange: HttpExchange) {
         thisLogger().debug("Handling ${httpExchange.requestMethod} ${httpExchange.requestURI}")
 
-        val preferenceService = ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
         if (preferenceService.echoCommands) {
             val notification = NotificationGroupManager.getInstance()
                 .getNotificationGroup("cursing_less")
@@ -308,8 +316,6 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     }
 
     private suspend fun processCommand(command: String, project: Project, editor: Editor?): VoiceCommandResponse {
-        val voiceCommandParserService =
-            ApplicationManager.getApplication().getService(VoiceCommandParserService::class.java)
         val commandPortion = command.substring(command.indexOf("/") + 1)
         val commandInformation = commandPortion.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val voiceCommand = voiceCommandParserService.fromRequestUri(commandInformation[0])
@@ -327,17 +333,17 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     }
 
     private fun pullProjectAndEditor(): Pair<Project, Editor?> {
-        val editor = ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
-            .getFocusedEditor()
+        val editor = colorShapeLookupService.getFocusedEditor()
         val project = editor?.project ?: ProjectManager.getInstance().defaultProject
         return Pair(project, editor)
     }
 
     class RequestHandler : HttpHandler {
+        private val cursingCommandService: CursingCommandService by lazy {
+            ApplicationManager.getApplication().getService(CursingCommandService::class.java)
+        }
 
         override fun handle(httpExchange: HttpExchange) {
-            val cursingCommandService =
-                ApplicationManager.getApplication().getService(CursingCommandService::class.java)
             cursingCommandService.handleCommandRequest(httpExchange)
         }
 

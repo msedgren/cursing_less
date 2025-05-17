@@ -19,10 +19,12 @@ import org.cursing_less.service.CursingUserInteractionService
 
 class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretListener {
 
-    val cursingMarkupService: CursingMarkupService =
+    private val cursingMarkupService: CursingMarkupService by lazy {
         ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-    val cursingUserInteractionService: CursingUserInteractionService =
+    }
+    private val cursingUserInteractionService: CursingUserInteractionService by lazy {
         ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+    }
 
     companion object {
         private const val MOVED_KEY_NAME = "CURSING_MOVED"

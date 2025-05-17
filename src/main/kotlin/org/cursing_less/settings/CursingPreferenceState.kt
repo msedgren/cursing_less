@@ -40,6 +40,8 @@ data class CursingPreferenceState(
             fromShape(CursingShape.X, true)
         )
         const val defaultScale: Double = 0.7
+        // word characters, parens, braces, angles, square brackets, elvis, block comment start, block comment end,
+        // command or " or ' or ` or : or #, and any other non-whitespace character that does not match the others
         const val defaultTokenPattern: String =
             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
     }
