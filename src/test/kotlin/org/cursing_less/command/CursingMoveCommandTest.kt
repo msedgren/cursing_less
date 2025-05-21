@@ -58,13 +58,9 @@ class CursingMoveCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // Test with "pre" parameter (move to start of token)
-        val preResponse = CursingMoveCommand.run(listOf("pre", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val preResponse = CursingMoveCommand.run(listOf("pre", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
         assertEquals(CursingCommandService.OkayResponse, preResponse)
 
         // Verify that the caret position has changed to the start of "bar"
@@ -75,7 +71,7 @@ class CursingMoveCommandTest {
         assertEquals(5, preCaretPosition) // Position of 'b' in "<foo>bar</foo>"
 
         // Test with "post" parameter (move to end of token)
-        val postResponse = CursingMoveCommand.run(listOf("post", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val postResponse = CursingMoveCommand.run(listOf("post", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
         assertEquals(CursingCommandService.OkayResponse, postResponse)
 
         // Verify that the caret position has changed to the end of "bar"

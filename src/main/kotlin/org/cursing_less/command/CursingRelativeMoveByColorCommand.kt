@@ -11,11 +11,14 @@ import org.cursing_less.service.CursingCommandService
 
 @Suppress("unused")
 data object CursingRelativeMoveByColorCommand : VoiceCommand {
+    private val cursingColorShapeLookupService: CursingColorShapeLookupService by lazy {
+        getApplication().getService(CursingColorShapeLookupService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_to_relative_location_by_color"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         if (editor != null && commandParameters.size == 3) {
-            val cursingColorShapeLookupService = getApplication().getService(CursingColorShapeLookupService::class.java)
             val next = commandParameters[0] == "next"
             val pre = commandParameters[1] == "pre"
             val color = cursingColorShapeLookupService.parseColor(commandParameters[2])

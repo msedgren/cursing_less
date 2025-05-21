@@ -23,13 +23,6 @@ class CursingPreferenceService {
     val shapes: List<CursingShape>
         get() = settingsComponent.state.generateCursingShapes()
 
-    // Generate coded colors and shapes maps
-    val codedColors: MutableMap<String, CursingColor>
-        get() = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }
-
-    val codedShapes: MutableMap<String, CursingShape>
-        get() = shapes.withIndex().associateTo(mutableMapOf()) { Pair(encodeToShape(it.index + 1), it.value) }
-
     // Get scale from settings
     val scale: Double
         get() = settingsComponent.state.scale
@@ -47,10 +40,4 @@ class CursingPreferenceService {
     fun toggleEchoCommands() {
         echoCommandsAtomic.set(!echoCommandsAtomic.get())
     }
-
-    fun encodeToColor(given: Int) = "color_$given"
-    fun encodeToShape(given: Int) = "shape_$given"
-
-    fun mapToCode(color: CursingColor) = colors.indexOf(color) + 1
-    fun mapToCode(shape: CursingShape) = shapes.indexOf(shape) + 1
 }

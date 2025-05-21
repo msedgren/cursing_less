@@ -7,10 +7,13 @@ import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 
 data object ToggleMarkupCommand : VoiceCommand {
+    private val markupService: CursingMarkupService by lazy {
+        getApplication().getService(CursingMarkupService::class.java)
+    }
+
     override fun matches(command: String) = command == "toggle_markup"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
-        val markupService = getApplication().getService(CursingMarkupService::class.java)
         markupService.toggleEnabled()
         return CursingCommandService.OkayResponse
     }

@@ -11,12 +11,15 @@ import org.cursing_less.service.CursingSelectionService
 
 data object CursingSelectCommand : VoiceCommand {
 
+    private val cursingSelectionService: CursingSelectionService by lazy {
+        getApplication().getService(CursingSelectionService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_select"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         if (editor != null && commandParameters.size == 4) {
             val mode = commandParameters[0]
-            val cursingSelectionService = getApplication().getService(CursingSelectionService::class.java)
             val consumedData = cursingSelectionService.find(commandParameters.drop(1), editor)
 
             if (consumedData != null) {

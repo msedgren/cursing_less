@@ -11,11 +11,14 @@ import org.cursing_less.service.CursingSelectionService
 
 data object CursingMoveCommand : VoiceCommand {
 
+    private val cursingSelectionService: CursingSelectionService by lazy {
+        getApplication().getService(CursingSelectionService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_to_location"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         if (editor != null && commandParameters.size == 4) {
-            val cursingSelectionService = getApplication().getService(CursingSelectionService::class.java)
             val pre = commandParameters[0] == "pre"
             val consumedData = cursingSelectionService.find(commandParameters.drop(1), editor)
             if (consumedData != null) {

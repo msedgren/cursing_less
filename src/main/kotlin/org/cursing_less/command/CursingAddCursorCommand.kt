@@ -12,6 +12,10 @@ import org.cursing_less.service.CursingSelectionService
 
 data object CursingAddCursorCommand : VoiceCommand {
 
+    private val cursingMarkupService by lazy {
+        getApplication().getService(CursingMarkupService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_add_cursor"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -33,7 +37,6 @@ data object CursingAddCursorCommand : VoiceCommand {
 
                     if (caret != null) {
                         // Update the markup to reflect the changes
-                        val cursingMarkupService = getApplication().getService(CursingMarkupService::class.java)
                         cursingMarkupService.updateCursingTokens(editor, offset)
                     }
                 }

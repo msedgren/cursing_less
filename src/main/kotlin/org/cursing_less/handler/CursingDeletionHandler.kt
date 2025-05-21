@@ -13,8 +13,9 @@ import org.cursing_less.service.CursingUserInteractionService
 class CursingDeletionHandler(private val originalHandler: EditorActionHandler) :
     EditorActionHandler(originalHandler.runForAllCarets()) {
 
-    private val cursingUserInteractionService = ApplicationManager.getApplication()
-        .getService(CursingUserInteractionService::class.java)
+    private val cursingUserInteractionService: CursingUserInteractionService by lazy {
+        ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+    }
 
     override fun doExecute(editor: Editor, caret: Caret?, dataContext: DataContext?) {
         try {

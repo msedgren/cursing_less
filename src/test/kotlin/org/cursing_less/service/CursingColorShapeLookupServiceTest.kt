@@ -46,10 +46,10 @@ class CursingColorShapeLookupServiceTest {
 
     @Test
     fun itCanParseColorShape() {
-        val firstParsed = lookupService.parseToColorShape("1", preferenceService.shapes[0].name)
+        val firstParsed = lookupService.parseToColorShape(preferenceService.colors[0].name, preferenceService.shapes[0].name)
         assertEquals(CursingColorShape(preferenceService.colors[0], preferenceService.shapes[0]), firstParsed)
 
-        val secondParsed = lookupService.parseToColorShape(preferenceService.colors[1].name, "3")
+        val secondParsed = lookupService.parseToColorShape(preferenceService.colors[1].name, preferenceService.shapes[2].name)
         assertEquals(CursingColorShape(preferenceService.colors[1], preferenceService.shapes[2]), secondParsed)
     }
 }

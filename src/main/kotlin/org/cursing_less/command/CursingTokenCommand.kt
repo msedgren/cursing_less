@@ -13,6 +13,10 @@ import org.cursing_less.color_shape.ColorAndShapeManager
 
 data object CursingTokenCommand : VoiceCommand {
 
+    private val cursingSelectionService: CursingSelectionService by lazy {
+        getApplication().getService(CursingSelectionService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_token"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -26,7 +30,6 @@ data object CursingTokenCommand : VoiceCommand {
             val token = findTokenAtOffset(editor, caretOffset)
 
             if (token != null) {
-                val cursingSelectionService = getApplication().getService(CursingSelectionService::class.java)
                 withContext(Dispatchers.EDT) {
                     cursingSelectionService
                         .handleMode(mode, token.startOffset, token.endOffset, editor, project)

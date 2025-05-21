@@ -58,14 +58,10 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the select_to command with the numbers and character
         val response =
-            CursingSelectToCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "b"), project, editor)
+            CursingSelectToCommand.run(listOf("select", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -92,13 +88,9 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the copy_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("copy", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingSelectToCommand.run(listOf("copy", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -124,13 +116,9 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the cut_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("cut", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingSelectToCommand.run(listOf("cut", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -158,13 +146,9 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the clear_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("clear", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingSelectToCommand.run(listOf("clear", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -190,14 +174,10 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the select_to command with the numbers, character, and "before" parameter
         val response = CursingSelectToCommand.run(
-            listOf("select", "$colorNumber", "$shapeNumber", "b", "before"), 
+            listOf("select", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b", "before"),
             project, 
             editor
         )
@@ -227,14 +207,10 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the select_to command with the numbers, character, and "after" parameter
         val response = CursingSelectToCommand.run(
-            listOf("select", "$colorNumber", "$shapeNumber", "b", "after"), 
+            listOf("select", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b", "after"),
             project, 
             editor
         )

@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.service.CursingCommandService
+import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingSelectionService
 
 /**
@@ -18,11 +19,14 @@ import org.cursing_less.service.CursingSelectionService
  */
 data object CursingSwapTokensCommand : VoiceCommand {
 
-    val cursingMarkupService = getApplication().getService(org.cursing_less.service.CursingMarkupService::class.java)
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        getApplication().getService(CursingMarkupService::class.java)
+    }
 
     // Get the service on-demand instead of during class initialization
-    private val cursingSelectionService: CursingSelectionService
-        get() = getApplication().getService(CursingSelectionService::class.java)
+    private val cursingSelectionService: CursingSelectionService by lazy {
+        getApplication().getService(CursingSelectionService::class.java)
+    }
 
     override fun matches(command: String) = command == "curse_swap_tokens"
 

@@ -11,7 +11,9 @@ import org.cursing_less.service.CursingSelectionService
 
 data object CursingSelectToCommand : VoiceCommand {
 
-    private val cursingSelectionService: CursingSelectionService = getApplication().getService(CursingSelectionService::class.java)
+    private val cursingSelectionService: CursingSelectionService by lazy {
+        getApplication().getService(CursingSelectionService::class.java)
+    }
 
     override fun matches(command: String) = command == "curse_select_to"
 

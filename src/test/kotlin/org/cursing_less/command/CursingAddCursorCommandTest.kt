@@ -56,14 +56,9 @@ class CursingAddCursorCommandTest {
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, offset)
         assertNotNull(colorAndShape)
 
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
-
         // When we run the add cursor command with the numbers and character
         val response =
-            CursingAddCursorCommand.run(listOf("$colorNumber", "$shapeNumber", "$character"), project, editor)
+            CursingAddCursorCommand.run(listOf("${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "$character"), project, editor)
 
         // then the response should be Okay
         assertEquals(CursingCommandService.OkayResponse, response)
