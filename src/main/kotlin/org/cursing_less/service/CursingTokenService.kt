@@ -55,31 +55,13 @@ class CursingTokenService() {
             val currentJob = coroutineContext[Job]
 
             ReadAction.nonBlocking<Map<Int, Pair<Char, CursingColorShape>>> {
-                val project = editor.project ?: ProjectManager.getInstance().defaultProject
-                val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
                 val found = mutableMapOf<Int, Pair<Char, CursingColorShape>>()
-                if (file != null) {
-                    val elements = findVisibleElements(visibleArea, file)
-                    ProgressManager.checkCanceled()
-                    val offsetComparator =
-                        OffsetDistanceComparator<Pair<PsiElement, String>>(offset) { it.first.startOffset }
-                    val consumed = elements
-                        .asSequence()
-                        .filter { visibleArea.contains(it.startOffset) }
-                        .map { Pair(it, it.text) }
-                        .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
-                        .sortedWith(offsetComparator)
-                        .mapNotNull { (element, text) ->
-                            manager.consume(element.startOffset, text)?.let {
-                                Pair(element.startOffset, Pair(text[0], it))
-                            }
-                        }
-
-                    found.putAll(consumed)
-                }
+                found.putAll(consumeVisible(manager, offset,
+                    found.keys, editor.document.getText(visibleArea), visibleArea))
 
                 ProgressManager.checkCanceled()
-                found.putAll(consumeVisible(manager, offset, found.keys, editor.document.getText(visibleArea), visibleArea))
+
+                found.putAll(consumeVisiblePsi(manager, offset, editor, visibleArea))
                 found
             }
                 .expireWhen { currentJob?.isCancelled == true } // Cancel when the coroutine is cancelled
@@ -109,14 +91,55 @@ class CursingTokenService() {
      *
      * @param text The text to search for tokens
      * @param startOffset The starting offset in the document
-     * @return A list of CursingToken objects representing the tokens found
+     * @return A sequence of CursingToken objects representing the tokens found
      */
-    fun findAllCursingTokensWithin(text: String, startOffset: Int): List<CursingToken> {
+    fun findAllCursingTokensWithin(text: String, startOffset: Int): Sequence<CursingToken> {
         val reg = preferenceService.tokenPattern
 
-        return reg.findAll(text).iterator().asSequence()
+        return reg.findAll(text)
+            .iterator()
+            .asSequence()
             .filter { it.value.isNotBlank() && !it.value[0].isWhitespace() }
-            .map { CursingToken(startOffset + it.range.first, startOffset + it.range.last + 1, it.value) }.toList()
+            .map { CursingToken(startOffset + it.range.first, startOffset + it.range.last + 1, it.value) }
+    }
+
+
+    /**
+     * Processes visible PSI elements in the editor and consumes tokens for markup.
+     *
+     * @param manager The color and shape manager responsible for token consumption and style assignment
+     * @param offset The current cursor offset in the editor
+     * @param editor The editor instance containing the text to process
+     * @param visibleArea The visible text range in the editor
+     * @return A sequence of pairs containing the offset and corresponding character-style pairs for markup
+     */
+    fun consumeVisiblePsi(
+        manager: ColorAndShapeManager,
+        offset: Int,
+        editor: Editor,
+        visibleArea: ProperTextRange
+    ): Sequence<Pair<Int, Pair<Char, CursingColorShape>>> {
+        val project = editor.project ?: ProjectManager.getInstance().defaultProject
+        val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
+        if (file != null) {
+            val elements = findVisibleElements(visibleArea, file)
+            ProgressManager.checkCanceled()
+            val offsetComparator =
+                OffsetDistanceComparator<Pair<PsiElement, String>>(offset) { it.first.startOffset }
+            return elements
+                .asSequence()
+                .filter { visibleArea.contains(it.startOffset) }
+                .map { Pair(it, it.text) }
+                .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
+                .sortedWith(offsetComparator)
+                .mapNotNull { (element, text) ->
+                    manager.consume(element.startOffset, text)?.let {
+                        Pair(element.startOffset, Pair(text[0], it))
+                    }
+                }
+        } else {
+            return emptySequence()
+        }
     }
 
     /**
@@ -127,7 +150,7 @@ class CursingTokenService() {
      * @param alreadyKnown Set of offsets that are already known/processed
      * @param text The visible text
      * @param visibleArea The range of visible text
-     * @return List of pairs containing offset and consumed token information
+     * @return Sequence of pairs containing offset and consumed token information
      */
     fun consumeVisible(
         colorAndShapeManager: ColorAndShapeManager,
@@ -135,7 +158,7 @@ class CursingTokenService() {
         alreadyKnown: Set<Int>,
         text: String,
         visibleArea: ProperTextRange
-    ): List<Pair<Int, Pair<Char, CursingColorShape>>> {
+    ): Sequence<Pair<Int, Pair<Char, CursingColorShape>>> {
         val tokens = findAllCursingTokensWithin(text, visibleArea.startOffset)
         val offsetComparator = OffsetDistanceComparator<CursingToken>(currentOffset) { it.startOffset }
         return tokens
@@ -145,6 +168,6 @@ class CursingTokenService() {
                 colorAndShapeManager.consume(it.startOffset, it.text)?.let { consumed ->
                     Pair(it.startOffset, Pair(it.text[0], consumed))
                 }
-            }.toList()
+            }
     }
 }

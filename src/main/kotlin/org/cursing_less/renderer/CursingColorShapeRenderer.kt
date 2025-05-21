@@ -49,6 +49,7 @@ class ColoredShapeRenderer(
         val editor = inlay.editor
         val existingInlayWidth =
             editor.inlayModel.getInlineElementsInRange(offset, offset)
+                .asSequence()
                 .filter { it.getUserData(INLAY_KEY) == null }
                 .map { it.widthInPixels }
                 .firstOrNull() ?: 0

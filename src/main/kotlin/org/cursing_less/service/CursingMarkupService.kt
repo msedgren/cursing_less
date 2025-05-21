@@ -184,6 +184,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     if (existingInlays.isNotEmpty()) {
                         editor.inlayModel.execute(false) {
                             existingInlays
+                                .asSequence()
                                 .map { it.first }
                                 .forEach {
                                     if (it.isValid) {
@@ -206,6 +207,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     private suspend fun pullExistingInlaysByOffset(editor: Editor): Map<Int, List<Pair<Inlay<*>, CursingColorShape>>> {
         return withContext(Dispatchers.EDT) {
             editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength - 1)
+                .asSequence()
                 .filter { it.getUserData(INLAY_KEY) != null }
                 .groupBy { it.offset }
                 .mapValues { it.value.map { inlay -> Pair(inlay, inlay.getUserData(INLAY_KEY) as CursingColorShape) } }

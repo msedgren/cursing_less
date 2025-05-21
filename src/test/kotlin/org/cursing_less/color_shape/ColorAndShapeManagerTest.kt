@@ -55,7 +55,7 @@ class ColorAndShapeManagerTest {
         // then it should shrink the first
         val first = manager.consumedAtOffset(0)
         assertNotNull(first)
-        assertEquals(ColorAndShapeManager.ConsumedData(first!!.colorShape, 0, "Let us", "Let us remember"), first)
+        assertEquals(ColorAndShapeManager.ConsumedData(first!!.colorShape, 0, "Let us ", "Let us remember"), first)
         // and the last should also be correct
         val last = manager.consumedAtOffset(7)
         assertNotNull(last)
@@ -79,7 +79,7 @@ class ColorAndShapeManagerTest {
         // and the last should also be correct
         val last = manager.consumedAtOffset(16)
         assertNotNull(last)
-        assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 16, "how the", "how the sky"), last)
+        assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 16, "how the ", "how the sky"), last)
     }
 
 
@@ -181,7 +181,7 @@ class ColorAndShapeManagerTest {
         // Verify the first token was truncated
         val firstBeforeFree = manager.consumedAtOffset(0)
         assertNotNull(firstBeforeFree)
-        assertEquals("Let us", firstBeforeFree?.consumedText)
+        assertEquals("Let us ", firstBeforeFree?.consumedText)
         assertEquals("Let us remember", firstBeforeFree?.originalText)
 
         // Now free the second token
@@ -210,7 +210,7 @@ class ColorAndShapeManagerTest {
         // Verify the second token was truncated
         val secondBeforeFree = manager.consumedAtOffset(16)
         assertNotNull(secondBeforeFree)
-        assertEquals("how the", secondBeforeFree?.consumedText)
+        assertEquals("how the ", secondBeforeFree?.consumedText)
         assertEquals("how the sky", secondBeforeFree?.originalText)
 
         // Now free the first token

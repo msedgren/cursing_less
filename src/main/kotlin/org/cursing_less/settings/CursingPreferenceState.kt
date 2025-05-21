@@ -51,6 +51,7 @@ data class CursingPreferenceState(
      */
     fun generateCursingColors(): List<CursingColor> {
         return colors
+            .asSequence()
             .filter { it.enabled }
             .map {
                 CursingColor(
@@ -58,6 +59,7 @@ data class CursingPreferenceState(
                     it.generateJbColor()
                 )
             }
+            .toList()
     }
 
     /**
@@ -65,12 +67,14 @@ data class CursingPreferenceState(
      */
     fun generateCursingShapes(): List<CursingShape> {
         return shapes
+            .asSequence()
             .filter { it.enabled }
             .mapNotNull { shapeState ->
                 CursingShape::class.sealedSubclasses
                     .mapNotNull { it.objectInstance }
                     .firstOrNull { it.name == shapeState.name }
             }
+            .toList()
     }
 
     /**

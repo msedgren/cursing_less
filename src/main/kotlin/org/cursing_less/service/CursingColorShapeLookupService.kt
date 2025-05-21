@@ -60,6 +60,7 @@ class CursingColorShapeLookupService {
 
         // Check each existing editor to determine if its UI component contains the focused component
         return EditorFactory.getInstance().allEditors
+            .asSequence()
             .filter { !it.isDisposed }
             .filter { it.contentComponent.isShowing }
             .filter { it.contentComponent.isFocusOwner}

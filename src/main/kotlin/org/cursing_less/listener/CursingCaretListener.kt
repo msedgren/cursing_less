@@ -99,6 +99,7 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
         val cursorPosition = editor.visualPositionToXY(editor.offsetToVisualPosition(cursorOffset)).x
         // Check for any inlay in that range without INLAY_KEY
         editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
+            .asSequence()
             .filter { it.getUserData(INLAY_KEY) == null }
             .map { editor.visualPositionToXY(it.visualPosition) }
             .map { it.x }
