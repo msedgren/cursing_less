@@ -158,7 +158,7 @@ class CursingSelectCommandTest {
             Arguments.of(9, 't', "this"),
             Arguments.of(14, 'w', "works"),
             Arguments.of(19, '-', "--"),
-            Arguments.of(21, '>', ">"),
+            Arguments.of(21, '>', "><"),
             Arguments.of(23, 'f', "foo"),
             Arguments.of(26, '>', ">"),
             Arguments.of(27, 'b', "bar"),

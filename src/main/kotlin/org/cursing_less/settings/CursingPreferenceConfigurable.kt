@@ -5,7 +5,6 @@ import com.intellij.openapi.options.Configurable
 import kotlinx.coroutines.launch
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferencePersistenceService
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.service.CursingScopeService
 import javax.swing.JComponent
 

@@ -18,8 +18,10 @@ import java.awt.Color
 data class CursingPreferenceState(
     @JvmField @OptionTag(converter = ColorStateConverter::class) val colors: List<ColorState> = defaultColors,
     @JvmField @OptionTag(converter = ShapeStateConverter::class) val shapes: List<ShapeState> = defaultShapes,
-    @JvmField val scale: Double = defaultScale,
-    @JvmField val tokenPattern: String = defaultTokenPattern
+    @JvmField @OptionTag val scale: Double = defaultScale,
+    @JvmField @OptionTag val tokenPattern: String = defaultTokenPattern,
+    @JvmField @OptionTag val usePsiTree: Boolean = defaultUsePsiTree,
+    @JvmField @OptionTag val useRegex: Boolean = defaultUseRegex
 ) {
 
     companion object {
@@ -37,13 +39,19 @@ data class CursingPreferenceState(
             fromShape(CursingShape.Slash, true),
             fromShape(CursingShape.BackSlash, true),
             fromShape(CursingShape.Line, true),
-            fromShape(CursingShape.X, true)
+            fromShape(CursingShape.X, true),
+            fromShape(CursingShape.Triangle, true),
+            fromShape(CursingShape.Star, true),
+            fromShape(CursingShape.Crescent, true),
+            fromShape(CursingShape.Heart, true)
         )
-        const val defaultScale: Double = 0.7
+        val defaultScale: Double = 0.7
         // word characters, parens, braces, angles, square brackets, elvis, block comment start, block comment end,
         // command or " or ' or ` or : or #, and any other non-whitespace character that does not match the others
         const val defaultTokenPattern: String =
             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
+        const val defaultUsePsiTree: Boolean = false
+        const val defaultUseRegex: Boolean = true
     }
 
     /**

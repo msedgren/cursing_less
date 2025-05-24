@@ -56,12 +56,19 @@ class CursingTokenService() {
 
             ReadAction.nonBlocking<Map<Int, Pair<Char, CursingColorShape>>> {
                 val found = mutableMapOf<Int, Pair<Char, CursingColorShape>>()
-                found.putAll(consumeVisible(manager, offset,
-                    found.keys, editor.document.getText(visibleArea), visibleArea))
+
+                // Only use regex if enabled in preferences
+                if (preferenceService.useRegex) {
+                    found.putAll(consumeVisible(manager, offset,
+                        found.keys, editor.document.getText(visibleArea), visibleArea))
+                }
 
                 ProgressManager.checkCanceled()
 
-                found.putAll(consumeVisiblePsi(manager, offset, editor, visibleArea))
+                // Only use PSI tree if enabled in preferences
+                if (preferenceService.usePsiTree) {
+                    found.putAll(consumeVisiblePsi(manager, offset, editor, visibleArea))
+                }
                 found
             }
                 .expireWhen { currentJob?.isCancelled == true } // Cancel when the coroutine is cancelled

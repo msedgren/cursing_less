@@ -131,9 +131,12 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     }
 
     private fun getPortForCurrentIde(): Int {
+        return PLATFORM_TO_PORT[getPrefix()] ?: DEFAULT_PORT
+    }
+
+    private fun getPrefix(): String {
         val buildNumber = ApplicationInfo.getInstance().build
-        val prefix = getPathSelectorPrefixByProductCode(buildNumber.productCode) ?: ""
-        return PLATFORM_TO_PORT[prefix] ?: DEFAULT_PORT
+        return getPathSelectorPrefixByProductCode(buildNumber.productCode) ?: ""
     }
 
     /**
@@ -202,10 +205,11 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     fun startup(): Boolean {
         try {
             if (!initialized.get()) {
+                val port: Int = getPortForCurrentIde()
+
+                thisLogger().info("Starting up cursing_less plugin with prefix ${getPrefix()} and port $port")
                 // Try to shut down any existing instance before starting a new one
                 shutdownExistingService()
-
-                val port: Int = getPortForCurrentIde()
 
                 // Generate the nonce and store it
                 nonce = generateNonce()

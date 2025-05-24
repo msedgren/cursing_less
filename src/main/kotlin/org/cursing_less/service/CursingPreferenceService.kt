@@ -6,6 +6,7 @@ import com.intellij.openapi.components.service
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
 import org.cursing_less.service.CursingPreferencePersistenceService
+import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service(Service.Level.APP)
@@ -30,6 +31,14 @@ class CursingPreferenceService {
     // Get token pattern from settings
     val tokenPattern: Regex
         get() = Regex(settingsComponent.state.tokenPattern)
+
+    // Get usePsiTree flag from settings
+    val usePsiTree: Boolean
+        get() = settingsComponent.state.usePsiTree
+
+    // Get useRegex flag from settings
+    val useRegex: Boolean
+        get() = settingsComponent.state.useRegex
 
     private val echoCommandsAtomic = AtomicBoolean(false)
 
