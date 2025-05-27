@@ -9,6 +9,8 @@ import com.intellij.openapi.util.TextRange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
+import kotlin.math.min
+import kotlin.math.max
 
 /**
  * Command that swaps the content of two cursor selections identified by their relative number.
@@ -48,8 +50,8 @@ data object CursingSwapSelectionsCommand : VoiceCommand {
             val allCarets = caretModel.allCarets
 
             // Get the two carets
-            val firstCaret = allCarets.getOrNull(firstCursor - 1)
-            val secondCaret = allCarets.getOrNull(secondCursor - 1)
+            val firstCaret = allCarets.getOrNull(min(firstCursor, secondCursor) - 1)
+            val secondCaret = allCarets.getOrNull(max(firstCursor, secondCursor) - 1)
             // Get the selection ranges
             val firstStart = firstCaret?.selectionStart ?: 0
             val firstEnd = firstCaret?.selectionEnd ?: 0

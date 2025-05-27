@@ -9,16 +9,9 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.ProperTextRange
 import com.intellij.openapi.util.getOrCreateUserDataUnsafe
 import com.intellij.openapi.util.removeUserData
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.startOffset
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import kotlinx.coroutines.*
@@ -28,7 +21,6 @@ import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.renderer.ColoredShapeRenderer
-import org.cursing_less.util.OffsetDistanceComparator
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.lazy
@@ -206,7 +198,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     private suspend fun pullExistingInlaysByOffset(editor: Editor): Map<Int, List<Pair<Inlay<*>, CursingColorShape>>> {
         return withContext(Dispatchers.EDT) {
-            editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength - 1)
+            editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength)
                 .asSequence()
                 .filter { it.getUserData(INLAY_KEY) != null }
                 .groupBy { it.offset }

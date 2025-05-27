@@ -67,7 +67,7 @@ object CursingTestUtils {
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
 
             data = editor.inlayModel.getInlineElementsInRange(offset, offset)
-                .firstNotNullOf { it.getUserData(INLAY_KEY) }
+                .firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
         }
         return data
     }

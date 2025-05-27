@@ -1,6 +1,8 @@
 package org.cursing_less.service
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
+import org.cursing_less.topic.CursingMarkStorageListener
 
 /**
  * Data class to store marked text and its starting offset.
@@ -26,6 +28,7 @@ class CursingMarkStorageService {
      */
     fun storeMarkedText(markNumber: Int, text: String, startOffset: Int) {
         markedTextMap[markNumber] = MarkedTextInfo(text, startOffset)
+        notifyListeners()
     }
 
     /**
@@ -55,6 +58,7 @@ class CursingMarkStorageService {
      */
     fun clearMarkedText(markNumber: Int) {
         markedTextMap.remove(markNumber)
+        notifyListeners()
     }
 
     /**
@@ -62,6 +66,7 @@ class CursingMarkStorageService {
      */
     fun clearAllMarkedText() {
         markedTextMap.clear()
+        notifyListeners()
     }
 
     /**
@@ -73,4 +78,13 @@ class CursingMarkStorageService {
     fun getAllMarkedTextInfo(): Map<Int, MarkedTextInfo> {
         return markedTextMap.toMap()
     }
+
+    /**
+     * Notify listeners that storage has changed
+     */
+    private fun notifyListeners() {
+        ApplicationManager.getApplication().messageBus
+            .syncPublisher(CursingMarkStorageListener.TOPIC).onStorageChanged()
+    }
+
 }

@@ -28,10 +28,10 @@ class ColoredShapeRenderer(
         ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
     }
 
-    fun calculateSpace(inlay: Inlay<*>, character: Char): Int {
+    fun calculateSpace(inlay: Inlay<*>, character: Char): Pair<Int, Int> {
         val textMetrics =
             inlay.editor.contentComponent.getFontMetrics(inlay.editor.colorsScheme.getFont(EditorFontType.PLAIN))
-        return textMetrics.charWidth(character)
+        return Pair(textMetrics.charWidth(character), textMetrics.height)
     }
 
     override fun calcWidthInPixels(inlay: Inlay<*>): Int {
@@ -53,8 +53,11 @@ class ColoredShapeRenderer(
             CursingShape.Heart -> PaintableHeart
         }
 
-        val characterWidth = calculateSpace(inlay, character)
+        val lineHeight = inlay.editor.lineHeight
+        val (characterWidth, characterHeight) = calculateSpace(inlay, character)
         val widthToUse = (characterWidth * preferenceService.scale).toInt().let { if (it % 2 == 0) it else it - 1 }
+        val heightToUse = (lineHeight - characterHeight).let { if (it % 2 == 0) it else it - 1 }
+        val squareSizeToUse = minOf(widthToUse, heightToUse)
 
 
         val editor = inlay.editor
@@ -76,7 +79,7 @@ class ColoredShapeRenderer(
             targetRegion.x
         }
 
-        paintable.paint(g, adjustedX, widthToUse, targetRegion.y, widthToUse)
+        paintable.paint(g, adjustedX, squareSizeToUse, targetRegion.y, squareSizeToUse)
     }
 
 
@@ -244,7 +247,7 @@ class ColoredShapeRenderer(
         ) {
             val verticalOffsetDouble = verticalOffset.toDouble()
             val heightToUseDouble = heightToUse.toDouble()
-            val horizontalOffsetDouble = horizontalOffset.toDouble()
+            val horizontalOffsetDouble = horizontalOffset.toDouble() - 2.0
             val widthToUseDouble = widthToUse.toDouble()
             val gp = GeneralPath()
             gp.moveTo(horizontalOffsetDouble + widthToUseDouble, verticalOffsetDouble)
