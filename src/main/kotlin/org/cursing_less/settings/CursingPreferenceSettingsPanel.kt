@@ -11,7 +11,6 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBUI
 import org.cursing_less.MyBundle
 import java.awt.*
-import java.math.BigDecimal
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSpinner
@@ -35,8 +34,8 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         1.5,
         0.01))
     private val tokenPatternField = JBTextField(state.tokenPattern)
-    private val usePsiTreeCheckbox = JBCheckBox("Use PSI Tree", state.usePsiTree)
-    private val useRegexCheckbox = JBCheckBox("Use Regex", state.useRegex)
+    private val usePsiTreeCheckbox = JBCheckBox(MyBundle.message("cursing_less.settings.label.use_psi_tree"), state.usePsiTree)
+    private val useRegexCheckbox = JBCheckBox(MyBundle.message("cursing_less.settings.label.use_regex"), state.useRegex)
 
     // New color components
     private val newColorNameField = JBTextField()
@@ -104,7 +103,7 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         }
 
         private fun addColorLabel(gbc: GridBagConstraints, panel: JPanel, gridX: Int, labelText: String) {
-            val label = JLabel("")
+            val label = JLabel(labelText)
             label.preferredSize = Dimension(80, label.preferredSize.height)
             gbc.gridx = gridX
             gbc.gridy = 0

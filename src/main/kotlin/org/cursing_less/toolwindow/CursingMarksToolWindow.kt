@@ -1,6 +1,5 @@
 package org.cursing_less.toolwindow
 
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.project.Project
@@ -72,11 +71,7 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
 
 
         // Add a listener to dispose the timer when the tool window is disposed
-        Disposer.register(toolWindow.disposable, object : Disposable {
-            override fun dispose() {
-                connection.disconnect()
-            }
-        })
+        Disposer.register(toolWindow.disposable) { connection.disconnect() }
     }
 
     private fun updateMarksDisplay() {

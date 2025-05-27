@@ -18,10 +18,10 @@ import java.awt.Color
 data class CursingPreferenceState(
     @JvmField @OptionTag(converter = ColorStateConverter::class) val colors: List<ColorState> = defaultColors,
     @JvmField @OptionTag(converter = ShapeStateConverter::class) val shapes: List<ShapeState> = defaultShapes,
-    @JvmField @OptionTag val scale: Double = defaultScale,
-    @JvmField @OptionTag val tokenPattern: String = defaultTokenPattern,
-    @JvmField @OptionTag val usePsiTree: Boolean = defaultUsePsiTree,
-    @JvmField @OptionTag val useRegex: Boolean = defaultUseRegex
+    @JvmField @OptionTag val scale: Double = DEFAULT_SCALE,
+    @JvmField @OptionTag val tokenPattern: String = DEFAULT_TOKEN_PATTERN,
+    @JvmField @OptionTag val usePsiTree: Boolean = DEFAULT_USE_PSI_TREE,
+    @JvmField @OptionTag val useRegex: Boolean = DEFAULT_USE_REGEX
 ) {
 
     companion object {
@@ -40,18 +40,18 @@ data class CursingPreferenceState(
             fromShape(CursingShape.BackSlash, true),
             fromShape(CursingShape.Line, true),
             fromShape(CursingShape.X, true),
-            fromShape(CursingShape.Triangle, true),
-            fromShape(CursingShape.Star, true),
-            fromShape(CursingShape.Crescent, true),
-            fromShape(CursingShape.Heart, true)
+            fromShape(CursingShape.Triangle, false),
+            fromShape(CursingShape.Star, false),
+            fromShape(CursingShape.Crescent, false),
+            fromShape(CursingShape.Heart, false)
         )
-        val defaultScale: Double = 0.7
+        const val DEFAULT_SCALE: Double = 0.7
         // word characters, parens, braces, angles, square brackets, elvis, block comment start, block comment end,
         // command or " or ' or ` or : or #, and any other non-whitespace character that does not match the others
-        const val defaultTokenPattern: String =
+        const val DEFAULT_TOKEN_PATTERN: String =
             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
-        const val defaultUsePsiTree: Boolean = false
-        const val defaultUseRegex: Boolean = true
+        const val DEFAULT_USE_PSI_TREE: Boolean = false
+        const val DEFAULT_USE_REGEX: Boolean = true
     }
 
     /**

@@ -2,11 +2,8 @@ package org.cursing_less.service
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
-import org.cursing_less.service.CursingPreferencePersistenceService
-import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service(Service.Level.APP)

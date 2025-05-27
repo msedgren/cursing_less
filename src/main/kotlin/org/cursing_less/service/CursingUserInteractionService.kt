@@ -1,7 +1,6 @@
 package org.cursing_less.service
 
 import com.intellij.openapi.components.Service
-import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 

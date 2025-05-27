@@ -31,7 +31,7 @@ class ColorAndShapeManager(
     }
 
     @Synchronized
-    fun consume(offset: Int, text: String, preference: CursingColorShape?): CursingColorShape? {
+    fun consume(offset: Int, text: String, preference: CursingColorShape? = null): CursingColorShape? {
         require(text.isNotEmpty()) { "text must not be empty!" }
 
         if (consumed.contains(offset)) {
@@ -114,7 +114,7 @@ class ColorAndShapeManager(
                 val isTheOneToStretch = freed.startOffset == existingData.endOffset
                 if (isTheOneToStretch) {
                     val newLength =
-                        Math.min(existingData.originalEndOffset, freed.endOffset) - existingData.startOffset
+                        minOf(existingData.originalEndOffset, freed.endOffset) - existingData.startOffset
                     existingData.copy(consumedText = existingData.originalText.substring(0, newLength))
                 } else {
                     // No overlap, keep as is
