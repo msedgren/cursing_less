@@ -2,9 +2,7 @@ package org.cursing_less.color_shape
 
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.util.Key
-import com.jetbrains.rd.util.firstOrNull
 import org.cursing_less.util.OffsetDistanceComparator
-import java.util.stream.Collectors
 
 class ColorAndShapeManager(
     colors: Collection<CursingColor>,
@@ -33,7 +31,7 @@ class ColorAndShapeManager(
     }
 
     @Synchronized
-    fun consume(offset: Int, text: String): CursingColorShape? {
+    fun consume(offset: Int, text: String, preference: CursingColorShape?): CursingColorShape? {
         require(text.isNotEmpty()) { "text must not be empty!" }
 
         if (consumed.contains(offset)) {
@@ -47,7 +45,7 @@ class ColorAndShapeManager(
         val existing =
             characterState.computeIfAbsent(lowerCaseCharacter) { FreeCursingColorShape(generatePermutations()) }
         // get the preference (what it was previously set to) at that offset.
-        val preference = offsetPreference[offset]
+        val preference = preference ?: offsetPreference[offset]
         // attempt to consume
         val consumedThing = existing.consume(preference)
         if (consumedThing != null) {

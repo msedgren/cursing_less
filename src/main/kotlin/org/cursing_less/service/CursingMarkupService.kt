@@ -3,9 +3,7 @@ package org.cursing_less.service
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
@@ -23,12 +21,11 @@ import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.renderer.ColoredShapeRenderer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.lazy
 
 @Service(Service.Level.APP)
 class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
 
-    private val debouncer  by lazy {
+    private val debouncer by lazy {
         Debouncer(250, coroutineScope)
     }
     private val enabled = AtomicBoolean(true)
@@ -105,11 +102,13 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                 val colorAndShapeManager = createAndSetColorAndShapeManager(editor)
                 colorAndShapeManager.freeAll()
 
-                val tokens = tokenService.findCursingTokens(editor, cursorOffset, colorAndShapeManager).toMutableMap()
+                val existingInlays = withContext(Dispatchers.EDT) {
+                    pullExistingInlaysByOffset(editor)
+                }
+
+                val tokens = tokenService.findCursingTokens(editor, cursorOffset, colorAndShapeManager, existingInlays).toMutableMap()
 
                 withContext(Dispatchers.EDT) {
-                    val existingInlays = pullExistingInlaysByOffset(editor)
-
                     existingInlays.forEach { (offset, oldConsumedList) ->
                         var found = false
                         oldConsumedList.forEach { (inlay, consumedCursing) ->
@@ -127,11 +126,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     }
 
 
-                    if(tokens.contains(cursorOffset)) {
+                    if (tokens.contains(cursorOffset)) {
                         // exclude the current positon if there are multiple inlays to prevent
                         // the current position from being removed when the caret moves
                         val inlays = editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
-                        if(inlays.isNotEmpty()) {
+                        if (inlays.isNotEmpty()) {
                             colorAndShapeManager.free(cursorOffset)
                             tokens.remove(cursorOffset)
                         }
@@ -141,7 +140,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                         addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
                     }
 
-                     editor.contentComponent.repaint()
+                    editor.contentComponent.repaint()
                 }
             }
         }
@@ -232,7 +231,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         editor.inlayModel.addInlineElement(offset, false, Int.MIN_VALUE, renderer)
             ?.putUserData(INLAY_KEY, cursingColorShape)
     }
-
 
 
     class Debouncer(

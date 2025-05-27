@@ -5,6 +5,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.ProperTextRange
@@ -48,7 +49,10 @@ class CursingTokenService() {
      * @return A map of offset to a pair containing the token character and the cursing color shape
      */
     suspend fun findCursingTokens(
-        editor: Editor, offset: Int, manager: ColorAndShapeManager
+        editor: Editor,
+        offset: Int,
+        manager: ColorAndShapeManager,
+        existingInlays: Map<Int, List<Pair<Inlay<*>, CursingColorShape>>>
     ): Map<Int, Pair<Char, CursingColorShape>> {
         val visibleArea = withContext(Dispatchers.EDT) { editor.calculateVisibleRange() }
         return withContext(Dispatchers.Default) {
@@ -60,14 +64,14 @@ class CursingTokenService() {
                 // Only use regex if enabled in preferences
                 if (preferenceService.useRegex) {
                     found.putAll(consumeVisible(manager, offset,
-                        found.keys, editor.document.getText(visibleArea), visibleArea))
+                        found.keys, editor.document.getText(visibleArea), visibleArea, existingInlays))
                 }
 
                 ProgressManager.checkCanceled()
 
                 // Only use PSI tree if enabled in preferences
                 if (preferenceService.usePsiTree) {
-                    found.putAll(consumeVisiblePsi(manager, offset, editor, visibleArea))
+                    found.putAll(consumeVisiblePsi(manager, offset, editor, visibleArea, existingInlays))
                 }
                 found
             }
@@ -124,7 +128,8 @@ class CursingTokenService() {
         manager: ColorAndShapeManager,
         offset: Int,
         editor: Editor,
-        visibleArea: ProperTextRange
+        visibleArea: ProperTextRange,
+        existingInlays: Map<Int, List<Pair<Inlay<*>, CursingColorShape>>>
     ): Sequence<Pair<Int, Pair<Char, CursingColorShape>>> {
         val project = editor.project ?: ProjectManager.getInstance().defaultProject
         val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
@@ -140,7 +145,8 @@ class CursingTokenService() {
                 .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
                 .sortedWith(offsetComparator)
                 .mapNotNull { (element, text) ->
-                    manager.consume(element.startOffset, text)?.let {
+                    val preference = existingInlays[element.startOffset]?.firstOrNull()?.second
+                    manager.consume(element.startOffset, text, preference)?.let {
                         Pair(element.startOffset, Pair(text[0], it))
                     }
                 }
@@ -164,7 +170,8 @@ class CursingTokenService() {
         currentOffset: Int,
         alreadyKnown: Set<Int>,
         text: String,
-        visibleArea: ProperTextRange
+        visibleArea: ProperTextRange,
+        existingInlays: Map<Int, List<Pair<Inlay<*>, CursingColorShape>>>
     ): Sequence<Pair<Int, Pair<Char, CursingColorShape>>> {
         val tokens = findAllCursingTokensWithin(text, visibleArea.startOffset)
         val offsetComparator = OffsetDistanceComparator<CursingToken>(currentOffset) { it.startOffset }
@@ -172,7 +179,8 @@ class CursingTokenService() {
             .filterNot { alreadyKnown.contains(it.startOffset) }
             .sortedWith(offsetComparator)
             .mapNotNull {
-                colorAndShapeManager.consume(it.startOffset, it.text)?.let { consumed ->
+                val preference = existingInlays[it.startOffset]?.firstOrNull()?.second
+                colorAndShapeManager.consume(it.startOffset, it.text, preference)?.let { consumed ->
                     Pair(it.startOffset, Pair(it.text[0], consumed))
                 }
             }
