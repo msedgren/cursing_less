@@ -7,9 +7,9 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingSelectionService
-import org.cursing_less.color_shape.ColorAndShapeManager
 
 data object CursingTokenCommand : VoiceCommand {
 
@@ -41,9 +41,8 @@ data object CursingTokenCommand : VoiceCommand {
     }
 
     private suspend fun findTokenAtOffset(editor: Editor, offset: Int): ColorAndShapeManager.ConsumedData? {
-        return readAction {
-            val colorAndShapeManager = editor.getUserData(ColorAndShapeManager.KEY) ?: return@readAction null
-            colorAndShapeManager.consumedAtOffset(offset) ?: colorAndShapeManager.findTokenContainingOffset(offset)
+        return withContext(Dispatchers.EDT) { editor.getUserData(ColorAndShapeManager.KEY) }?.let {
+            it.consumedAtOffset(offset) ?: it.findTokenContainingOffset(offset)
         }
     }
 }
