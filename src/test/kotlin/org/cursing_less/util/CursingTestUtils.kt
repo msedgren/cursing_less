@@ -25,8 +25,6 @@ object CursingTestUtils {
      * @return The configured CodeInsightTestFixture
      */
     fun setupTestFixture(): CodeInsightTestFixture {
-        CursingApplicationListener.skipServer = true
-
         val projectTestFixture =
             IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "foo")
                 .fixture

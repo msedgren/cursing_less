@@ -23,7 +23,7 @@ data object ActionCommand : VoiceCommand {
         val actionId = commandParameters[0]
         val execute = actionShouldExecute(actionId, editor?.selectionModel)
 
-        // If we are attempting to perform an editor copy and we have no selection then we do nothing
+        // If we are attempting to perform an editor copy, and we have no selection, then we do nothing
         if (execute) {
             executeAction(project, actionId)
         }

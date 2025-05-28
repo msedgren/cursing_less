@@ -59,7 +59,7 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
         val content = contentFactory.createContent(panel, "Cursing Less", false)
         toolWindow.contentManager.addContent(content)
 
-        // Update the marks display initially
+        // Update the marks displayed initially
         updateMarksDisplay()
 
         // Subscribe to storage changes
@@ -70,7 +70,7 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
         })
 
 
-        // Add a listener to dispose the timer when the tool window is disposed
+        // Add a listener to dispose of the connection
         Disposer.register(toolWindow.disposable) { connection.disconnect() }
     }
 

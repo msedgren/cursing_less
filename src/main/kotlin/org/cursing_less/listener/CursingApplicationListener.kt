@@ -9,6 +9,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.actionSystem.EditorActionManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.remoteDev.tests.isDistributedTestMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -25,7 +26,6 @@ class CursingApplicationListener : AppLifecycleListener {
 
     companion object {
         val handler = StartupHandler()
-        var skipServer = false
     }
 
     override fun appWillBeClosed(isRestart: Boolean) {
@@ -55,7 +55,8 @@ class CursingApplicationListener : AppLifecycleListener {
             mutex.withLock {
                 if (!initialized.get()) {
                     thisLogger().info("app started initializing cursing_less plugin")
-                    if (skipServer || commandService.startup()) {
+                    if (ApplicationManager.getApplication().isUnitTestMode
+                        || commandService.startup()) {
                         setupListeners()
 
                         withContext(Dispatchers.EDT) {

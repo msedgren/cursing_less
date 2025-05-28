@@ -96,7 +96,7 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         ) {
             gbc.gridx = gridX
             gbc.gridy = 0
-            gbc.weightx = 0.0 // Take up remaining space
+            gbc.weightx = 0.0 // Take up the remaining space
             gbc.insets = JBUI.insetsRight(20)
             colorPanel.selectedColor = color
             panel.add(colorPanel, gbc)

@@ -8,7 +8,7 @@ import com.intellij.util.ui.update.Update
 import org.cursing_less.service.CursingCommandService
 
 /**
- * Command to shutdown the CursingCommandService.
+ * Command to shut down the CursingCommandService.
  * This will stop the HTTP server and clean up resources.
  */
 @Suppress("unused")

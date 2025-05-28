@@ -58,8 +58,8 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
         val directionState = cursingUserInteractionService.direction
         val last = editor.getUserData(MOVED_KEY)
         val move = getMoveDirection(directionState)
-        // Only considering moving the caret if we're not currently making a selection and
-        // we have not already adjusted for this move or adjusted for this offset or are moving in a different direction
+        // Only considering moving the caret if we're not currently making a selection, and
+        // we have not yet adjusted for this move or adjusted for this offset or are moving in a different direction
         if (!cursingUserInteractionService.leftMouseSelected && (last == null || last.offset != cursorOffset || last.assistAmount != move)) {
             val data = inlays.firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
             // Check if there's any inlay in the direction of movement that doesn't have INLAY_KEY

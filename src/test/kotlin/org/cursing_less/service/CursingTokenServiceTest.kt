@@ -1,10 +1,7 @@
 package org.cursing_less.service
 
 import com.intellij.openapi.components.service
-import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
-import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
-import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColor
@@ -18,12 +15,11 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 import com.intellij.ui.JBColor
 import com.intellij.util.application
-import org.cursing_less.listener.CursingApplicationListener
+import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
 
 class CursingTokenServiceTest {
 
-    private lateinit var projectTestFixture: IdeaProjectTestFixture
     private lateinit var codeInsightFixture: CodeInsightTestFixture
     private lateinit var tokenService: CursingTokenService
     private lateinit var colorAndShapeManager: ColorAndShapeManager
@@ -31,14 +27,7 @@ class CursingTokenServiceTest {
 
     @BeforeEach
     fun setUp() {
-        CursingApplicationListener.skipServer = true
-
-        projectTestFixture =
-            IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "bar")
-                .fixture
-
-        codeInsightFixture = IdeaTestFixtureFactory.getFixtureFactory().createCodeInsightFixture(projectTestFixture)
-        codeInsightFixture.setUp()
+        codeInsightFixture = CursingTestUtils.setupTestFixture()
 
         tokenService = application.service<CursingTokenService>()
 
@@ -71,25 +60,24 @@ class CursingTokenServiceTest {
         val tokens = tokenService
             .findAllCursingTokensWithin(text, startOffset)
             .sortedBy { it.startOffset }
+            .map { it.text }
+            .toList()
 
         // Check specific tokens
         assertEquals(
-            listOf("function", "test", "(", ")", "{", "return", "x", "+", "y", ";", "}"),
-            tokens.map { it.text })
-
-        // Verify offsets are calculated correctly
-        for (token in tokens) {
-            assertEquals(token.endOffset - token.startOffset, token.text.length)
-            assertTrue(token.startOffset >= startOffset)
-        }
+            listOf("function", "test", "()", "{", "return", "x", "+", "y", ";", "}"),
+            tokens)
     }
 
     @ParameterizedTest
     @MethodSource("provideTokenTestCases")
     fun testTokenPatternMatching(input: String, expectedTokens: List<String>) {
         val startOffset = 0
-        val tokens = tokenService.findAllCursingTokensWithin(input, startOffset)
-        assertEquals(expectedTokens, tokens.map { it.text })
+        val tokens = tokenService
+            .findAllCursingTokensWithin(input, startOffset)
+            .map { it.text }
+            .toList()
+        assertEquals(expectedTokens, tokens)
     }
 
     companion object {

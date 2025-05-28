@@ -1,13 +1,10 @@
 package org.cursing_less.service
 
 import com.intellij.openapi.components.service
-import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
-import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
-import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
 import org.cursing_less.color_shape.CursingColorShape
-import org.cursing_less.listener.CursingApplicationListener
+import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -15,7 +12,6 @@ import org.junit.jupiter.api.Test
 
 class CursingColorShapeLookupServiceTest {
 
-    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
     lateinit var lookupService: CursingColorShapeLookupService
     lateinit var preferenceService: CursingPreferenceService
@@ -23,14 +19,7 @@ class CursingColorShapeLookupServiceTest {
 
     @BeforeEach
     fun setUp() {
-        CursingApplicationListener.skipServer = true
-
-        projectTestFixture =
-            IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "bar")
-                .fixture
-
-        codeInsightFixture = IdeaTestFixtureFactory.getFixtureFactory().createCodeInsightFixture(projectTestFixture)
-        codeInsightFixture.setUp()
+        codeInsightFixture = CursingTestUtils.setupTestFixture()
 
         val project = codeInsightFixture.project
         lookupService = project.service<CursingColorShapeLookupService>()

@@ -112,6 +112,7 @@ class CursingTokenService() {
             .asSequence()
             .filter { it.value.isNotBlank() && !it.value[0].isWhitespace() }
             .map { CursingToken(startOffset + it.range.first, startOffset + it.range.last + 1, it.value) }
+            .distinctBy { it.startOffset }
     }
 
 

@@ -10,7 +10,6 @@ import java.util.stream.Stream
 
 /**
  * Tests for the ColorAndShapeManager focusing on overlapping token scenarios.
- * This test class uses parameterized tests to verify behavior with multiple overlapping tokens.
  */
 class ColorAndShapeManagerOverlapTest {
 
@@ -40,7 +39,6 @@ class ColorAndShapeManagerOverlapTest {
     data class ExpectedToken(val offset: Int, val consumedText: String)
 
     /**
-     * Parameterized test for consuming multiple overlapping tokens.
      * Tests various scenarios of token overlap and verifies the expected state after consumption.
      */
     @ParameterizedTest
@@ -65,7 +63,6 @@ class ColorAndShapeManagerOverlapTest {
     }
 
     /**
-     * Parameterized test for freeing tokens in overlapping scenarios.
      * Tests what happens when tokens are freed in various orders and verifies the expected state.
      */
     @ParameterizedTest
