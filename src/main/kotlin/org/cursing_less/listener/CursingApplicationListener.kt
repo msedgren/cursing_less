@@ -9,16 +9,13 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.actionSystem.EditorActionManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import com.intellij.remoteDev.tests.isDistributedTestMode
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.cursing_less.command.VoiceCommand
 import org.cursing_less.handler.CursingEditorActionHandler
 import org.cursing_less.service.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 
 class CursingApplicationListener : AppLifecycleListener {
@@ -30,9 +27,7 @@ class CursingApplicationListener : AppLifecycleListener {
 
     override fun appWillBeClosed(isRestart: Boolean) {
         thisLogger().info("shutting down cursing_less plugin")
-        runBlocking {
-            handler.shutdown()
-        }
+        handler.shutdown()
     }
 
     class StartupActivity : ProjectActivity {
@@ -49,14 +44,16 @@ class CursingApplicationListener : AppLifecycleListener {
             ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         }
         val initialized = AtomicBoolean(false)
-        private val mutex = Mutex()
+        val processing = AtomicInteger(0)
 
         suspend fun startup() {
-            mutex.withLock {
-                if (!initialized.get()) {
+            try {
+                val processingCount = processing.incrementAndGet()
+                if (processingCount <= 1 && !initialized.get()) {
                     thisLogger().info("app started initializing cursing_less plugin")
                     if (ApplicationManager.getApplication().isUnitTestMode
-                        || commandService.startup()) {
+                        || commandService.startup()
+                    ) {
                         setupListeners()
 
                         withContext(Dispatchers.EDT) {
@@ -73,6 +70,8 @@ class CursingApplicationListener : AppLifecycleListener {
                         initialized.set(true)
                     }
                 }
+            } finally {
+                processing.decrementAndGet()
             }
         }
 
@@ -115,15 +114,13 @@ class CursingApplicationListener : AppLifecycleListener {
             )
         }
 
-        suspend fun shutdown() {
-            mutex.withLock {
-                try {
-                    val commandService =
-                        ApplicationManager.getApplication().getService(CursingCommandService::class.java)
-                    commandService.shutdown()
-                } finally {
-                    initialized.set(false)
-                }
+        fun shutdown() {
+            try {
+                val commandService =
+                    ApplicationManager.getApplication().getService(CursingCommandService::class.java)
+                commandService.shutdown()
+            } finally {
+                initialized.set(false)
             }
         }
 

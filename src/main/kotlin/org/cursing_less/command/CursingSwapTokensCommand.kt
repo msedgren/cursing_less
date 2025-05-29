@@ -47,8 +47,7 @@ data object CursingSwapTokensCommand : VoiceCommand {
                     swapTokens(editor, firstToken, secondToken, project)
                 }
                 // Update the markup to reflect the changes
-
-                cursingMarkupService.updateCursingTokensNow(editor, 0)
+                cursingMarkupService.updateCursingTokens(editor, 0)
                 return CursingCommandService.OkayResponse
             }
         }

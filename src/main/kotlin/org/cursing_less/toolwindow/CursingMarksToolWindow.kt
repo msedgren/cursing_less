@@ -13,12 +13,11 @@ import com.intellij.util.ui.update.Update
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingMarkStorageService
 import org.cursing_less.topic.CursingMarkStorageListener
 import java.awt.BorderLayout
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JPanel
 import javax.swing.JTextArea
 
@@ -47,7 +46,7 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
     }
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
     private val connection = ApplicationManager.getApplication().messageBus.connect()
-    private val mutex = Mutex()
+    private val processing = AtomicInteger(0)
     private val queue = MergingUpdateQueue("cursing_less_maks_delay", 250, true, null)
 
 
@@ -71,14 +70,27 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
 
 
         // Add a listener to dispose of the connection
-        Disposer.register(toolWindow.disposable) { connection.disconnect() }
+        Disposer.register(toolWindow.disposable) {
+            connection.disconnect()
+            queue.cancelAllUpdates()
+            queue.dispose()
+        }
     }
 
     private fun updateMarksDisplay() {
         val task = object : Update("shutdown") {
             override fun run() {
                 coroutineScope.launch {
-                    updateMarksDisplayNow()
+                    try {
+                        val processingCount = processing.incrementAndGet()
+                        if (processingCount <= 1) {
+                            updateMarksDisplayNow()
+                        } else {
+                            updateMarksDisplay()
+                        }
+                    } finally {
+                        processing.decrementAndGet()
+                    }
                 }
             }
         }
@@ -89,29 +101,27 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
      * Updates the display of marks in the tool window.
      */
     private suspend fun updateMarksDisplayNow() {
-        mutex.withLock {
-            // Get all marked text from the storage service
-            val allMarks = markStorageService.getAllMarkedTextInfo()
+        // Get all marked text from the storage service
+        val allMarks = markStorageService.getAllMarkedTextInfo()
 
-            // Update the text area with the marks information
-            val marksText = if (allMarks.isNotEmpty()) {
-                buildString {
-                    allMarks.entries.forEach { (markNumber, markInfo) ->
-                        append("Mark $markNumber: ")
-                        append(markInfo.text.take(200))
-                        if (markInfo.text.length > 200) {
-                            append("...")
-                        }
-                        append("\n\n")
+        // Update the text area with the marks information
+        val marksText = if (allMarks.isNotEmpty()) {
+            buildString {
+                allMarks.entries.forEach { (markNumber, markInfo) ->
+                    append("Mark $markNumber: ")
+                    append(markInfo.text.take(200))
+                    if (markInfo.text.length > 200) {
+                        append("...")
                     }
+                    append("\n\n")
                 }
-            } else {
-                "No marks defined"
             }
+        } else {
+            "No marks defined"
+        }
 
-            withContext(Dispatchers.EDT) {
-                textArea.text = marksText
-            }
+        withContext(Dispatchers.EDT) {
+            textArea.text = marksText
         }
     }
 }
