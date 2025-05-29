@@ -12,6 +12,7 @@ import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.command.TokenPosition
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -175,9 +176,9 @@ class CursingSelectToCommandTest {
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
 
-        // when we run the select_to command with the numbers, character, and "before" parameter
+        // when we run the select_to command with the numbers, character, and START.alternativeValue parameter
         val response = CursingSelectToCommand.run(
-            listOf("select", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b", "before"),
+            listOf("select", TokenPosition.START.code, "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"),
             project, 
             editor
         )
@@ -208,9 +209,9 @@ class CursingSelectToCommandTest {
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
 
-        // when we run the select_to command with the numbers, character, and "after" parameter
+        // when we run the select_to command with the numbers, character, and END.code parameter
         val response = CursingSelectToCommand.run(
-            listOf("select", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b", "after"),
+            listOf("select", TokenPosition.END.code, "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"),
             project, 
             editor
         )

@@ -11,6 +11,7 @@ import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.command.TokenPosition
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -59,8 +60,8 @@ class CursingMoveCommandTest {
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
 
-        // Test with "pre" parameter (move to start of token)
-        val preResponse = CursingMoveCommand.run(listOf("pre", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
+        // Test with START parameter (move to start of token)
+        val preResponse = CursingMoveCommand.run(listOf(TokenPosition.START.code, "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
         assertEquals(CursingCommandService.OkayResponse, preResponse)
 
         // Verify that the caret position has changed to the start of "bar"
@@ -70,8 +71,8 @@ class CursingMoveCommandTest {
         }
         assertEquals(5, preCaretPosition) // Position of 'b' in "<foo>bar</foo>"
 
-        // Test with "post" parameter (move to end of token)
-        val postResponse = CursingMoveCommand.run(listOf("post", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
+        // Test with END parameter (move to end of token)
+        val postResponse = CursingMoveCommand.run(listOf(TokenPosition.END.code, "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
         assertEquals(CursingCommandService.OkayResponse, postResponse)
 
         // Verify that the caret position has changed to the end of "bar"

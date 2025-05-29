@@ -150,7 +150,7 @@ class ColorAndShapeManager(
     fun findTokenContainingOffset(offset: Int): ConsumedData? {
         return consumed
             .asSequence()
-            .filter { it.value.startOffset <= offset && offset < it.value.endOffset }
+            .filter { it.value.startOffset <= offset && offset <= it.value.endOffset }
             .firstOrNull()
             ?.value
     }

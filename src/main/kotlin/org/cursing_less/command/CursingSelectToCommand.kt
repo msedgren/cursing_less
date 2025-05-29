@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingSelectionService
+import org.cursing_less.command.TokenPosition
 
 data object CursingSelectToCommand : VoiceCommand {
 
@@ -28,31 +29,29 @@ data object CursingSelectToCommand : VoiceCommand {
     }
 
     private suspend fun runWithDefaultBehavior(
-        commandParameters: List<String>, 
-        project: Project, 
+        commandParameters: List<String>,
+        project: Project,
         editor: Editor
     ): VoiceCommandResponse {
-        return runWithExplicitStartSelection(commandParameters.plus("after"), project, editor = editor)
+        val mutable = commandParameters.toMutableList()
+        mutable.add(1, TokenPosition.END.code)
+        return runWithExplicitStartSelection(mutable, project, editor = editor)
     }
 
     private suspend fun runWithExplicitStartSelection(
-        commandParameters: List<String>, 
-        project: Project, 
+        commandParameters: List<String>,
+        project: Project,
         editor: Editor
     ): VoiceCommandResponse {
         val mode = commandParameters[0]
-        val beforeOrAfter = commandParameters[4]
+        val isStart = TokenPosition.isStart(commandParameters[1])
 
-        val consumedData = cursingSelectionService.find(commandParameters.subList(1, 4), editor)
+        val consumedData = cursingSelectionService.find(commandParameters.drop(2), editor)
 
         if (consumedData != null) {
             // Get current caret position and calculate endpoint within a read action
             val currentOffset = com.intellij.openapi.application.readAction { editor.caretModel.offset }
-            val endOffset = when (beforeOrAfter) {
-                "before" -> consumedData.startOffset
-                "after" -> consumedData.endOffset  // Include the first character of the token
-                else -> return CursingCommandService.BadResponse
-            }
+            val endOffset = if(isStart) consumedData.startOffset else consumedData.endOffset
 
             return performSelection(mode, currentOffset, endOffset, editor, project, cursingSelectionService)
         }

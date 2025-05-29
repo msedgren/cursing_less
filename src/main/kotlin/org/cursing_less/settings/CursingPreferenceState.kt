@@ -47,9 +47,10 @@ data class CursingPreferenceState(
         )
         const val DEFAULT_SCALE: Double = 0.7
         // word characters, parens, braces, angles, square brackets, elvis, block comment start, block comment end,
-        // command or " or ' or ` or : or #, and any other non-whitespace character that does not match the others
+        // " or ' or ` or : or #, one or more the same non-whitespace characters that is not one of the others,
+        // and any other non-whitespace character that does not match the others
         const val DEFAULT_TOKEN_PATTERN: String =
-            "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
+             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|(([^\\w(){}<>\\[\\]\\s.\"'`:#])\\11+)|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
         const val DEFAULT_USE_PSI_TREE: Boolean = false
         const val DEFAULT_USE_REGEX: Boolean = true
     }

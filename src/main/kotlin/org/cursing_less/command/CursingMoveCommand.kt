@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingSelectionService
+import org.cursing_less.command.TokenPosition
 
 data object CursingMoveCommand : VoiceCommand {
 
@@ -19,11 +20,11 @@ data object CursingMoveCommand : VoiceCommand {
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         if (editor != null && commandParameters.size == 4) {
-            val pre = commandParameters[0] == "pre"
+            val isStart = TokenPosition.isStart(commandParameters[0])
             val consumedData = cursingSelectionService.find(commandParameters.drop(1), editor)
             if (consumedData != null) {
                 withContext(Dispatchers.EDT) {
-                    val offset = if (pre) consumedData.startOffset else consumedData.endOffset
+                    val offset = if (isStart) consumedData.startOffset else consumedData.endOffset
                     editor.caretModel.moveToOffset(offset)
                     editor.selectionModel.removeSelection()
                 }
