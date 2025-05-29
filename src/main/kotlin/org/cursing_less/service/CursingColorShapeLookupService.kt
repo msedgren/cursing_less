@@ -14,8 +14,9 @@ import javax.swing.SwingUtilities
 @Service(Service.Level.APP)
 class CursingColorShapeLookupService {
 
-    private val cursingPreferenceService = ApplicationManager.getApplication()
-        .getService(CursingPreferenceService::class.java)
+    private val cursingPreferenceService: CursingPreferenceService by lazy {
+        ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
+    }
 
     fun parseToColorShape(colorString: String, shapeString: String): CursingColorShape? {
         val color = parseColor(colorString)
@@ -29,15 +30,13 @@ class CursingColorShapeLookupService {
     }
 
     fun parseColor(colorString: String): CursingColor? {
-        return colorString.toIntOrNull()
-            ?.let { cursingPreferenceService.codedColors[cursingPreferenceService.encodeToColor(it)] }
-            ?: cursingPreferenceService.colors.find { it.name == colorString }
+        val lowerCaseColorString = colorString.lowercase()
+        return cursingPreferenceService.colors.find { it.name.lowercase() == lowerCaseColorString }
     }
 
     fun parseShape(shapeString: String): CursingShape? {
-        return shapeString.toIntOrNull()
-            ?.let { cursingPreferenceService.codedShapes[cursingPreferenceService.encodeToShape(it)] }
-            ?: cursingPreferenceService.shapes.find { it.name == shapeString }
+        val lowerCaseShapeString = shapeString.lowercase()
+        return cursingPreferenceService.shapes.find { it.name.lowercase() == lowerCaseShapeString }
     }
 
     fun findConsumed(color: CursingColor, next: Boolean, editor: Editor): ColorAndShapeManager.ConsumedData? {
@@ -60,7 +59,10 @@ class CursingColorShapeLookupService {
 
         // Check each existing editor to determine if its UI component contains the focused component
         return EditorFactory.getInstance().allEditors
+            .asSequence()
             .filter { !it.isDisposed }
+            .filter { it.contentComponent.isShowing }
+            .filter { it.contentComponent.isFocusOwner}
             .find { SwingUtilities.isDescendingFrom(focusedComponent, it.contentComponent) }
     }
 }

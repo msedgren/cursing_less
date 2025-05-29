@@ -12,6 +12,7 @@ import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.command.TokenPosition
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -58,14 +59,10 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the select_to command with the numbers and character
         val response =
-            CursingSelectToCommand.run(listOf("select", "$colorNumber", "$shapeNumber", "b"), project, editor)
+            CursingSelectToCommand.run(listOf("select", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -92,13 +89,9 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the copy_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("copy", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingSelectToCommand.run(listOf("copy", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -124,13 +117,9 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the cut_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("cut", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingSelectToCommand.run(listOf("cut", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -158,13 +147,9 @@ class CursingSelectToCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the clear_to command with the numbers and character
-        val response = CursingSelectToCommand.run(listOf("clear", "$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingSelectToCommand.run(listOf("clear", "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertEquals(CursingCommandService.OkayResponse, response)
@@ -173,4 +158,69 @@ class CursingSelectToCommandTest {
         assertEquals("<f</foo>", editor.document.text)
     }
 
+    @Test
+    fun testSelectToWithBefore() = runBlocking {
+        // given a test editor
+        val project = codeInsightFixture.project
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+        val editor = codeInsightFixture.editor
+        // and the caret is positioned to the start of "oo>bar"
+        runInEdtAndWait {
+            editor.caretModel.moveToOffset(2)
+        }
+        // and markup is present
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
+
+        //and we can get the shape and color at offset 5 (tied to bar)
+        val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
+        assertNotNull(colorAndShape)
+
+        // when we run the select_to command with the numbers, character, and START.alternativeValue parameter
+        val response = CursingSelectToCommand.run(
+            listOf("select", TokenPosition.START.code, "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"),
+            project, 
+            editor
+        )
+
+        // it works
+        assertEquals(CursingCommandService.OkayResponse, response)
+        // and the text is selected up to but not including the start of the token
+        var selectedText = ""
+        runInEdtAndWait { selectedText = editor.selectionModel.selectedText ?: "" }
+        assertEquals("oo>", selectedText)
+    }
+
+    @Test
+    fun testSelectToWithAfter() = runBlocking {
+        // given a test editor
+        val project = codeInsightFixture.project
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+        val editor = codeInsightFixture.editor
+        // and the caret is positioned to the start of "oo>bar"
+        runInEdtAndWait {
+            editor.caretModel.moveToOffset(2)
+        }
+        // and markup is present
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        cursingMarkupService.updateCursingTokensNow(editor, 0)
+
+        //and we can get the shape and color at offset 5 (tied to bar)
+        val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
+        assertNotNull(colorAndShape)
+
+        // when we run the select_to command with the numbers, character, and END.code parameter
+        val response = CursingSelectToCommand.run(
+            listOf("select", TokenPosition.END.code, "${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"),
+            project, 
+            editor
+        )
+
+        // it works
+        assertEquals(CursingCommandService.OkayResponse, response)
+        // and the text is selected up to and including the first character of the token
+        var selectedText = ""
+        runInEdtAndWait { selectedText = editor.selectionModel.selectedText ?: "" }
+        assertEquals("oo>bar", selectedText)
+    }
 }

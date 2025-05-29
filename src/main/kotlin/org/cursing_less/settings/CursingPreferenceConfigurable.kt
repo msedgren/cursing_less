@@ -17,10 +17,16 @@ class CursingPreferenceConfigurable : Configurable {
     private var mySettingsComponent: CursingPreferenceSettingsPanel? = null
 
     // Get the settings component instance
-    private val settings =ApplicationManager.getApplication().getService(CursingPreferencePersistenceService::class.java)
-    private val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-    private val scopeService = ApplicationManager.getApplication().getService(CursingScopeService::class.java)
-    
+    private val settings: CursingPreferencePersistenceService by lazy {
+        ApplicationManager.getApplication().getService(CursingPreferencePersistenceService::class.java)
+    }
+    private val markupService: CursingMarkupService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
+    private val scopeService: CursingScopeService by lazy {
+        ApplicationManager.getApplication().getService(CursingScopeService::class.java)
+    }
+
     override fun getDisplayName(): String {
         return "Cursing Less"
     }

@@ -11,6 +11,10 @@ import org.cursing_less.service.CursingMarkupService
 
 data object CursingRemoveAllSecondaryCursorsCommand : VoiceCommand {
 
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_remove_all_secondary_cursors"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -23,8 +27,6 @@ data object CursingRemoveAllSecondaryCursorsCommand : VoiceCommand {
                     editor.caretModel.removeSecondaryCarets()
 
                     // Update the markup to reflect the changes
-                    val cursingMarkupService =
-                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
                     cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
                     CursingCommandService.OkayResponse
                 } else {

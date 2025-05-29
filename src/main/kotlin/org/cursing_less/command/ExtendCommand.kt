@@ -2,10 +2,7 @@ package org.cursing_less.command
 
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.LogicalPosition
-import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.IdeFocusManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
@@ -27,13 +24,7 @@ data object ExtendCommand : VoiceCommand {
                 val startLine = min(current.line.toDouble(), targetLine.toDouble()).toInt()
                 val endLine = max(current.line.toDouble(), targetLine.toDouble()).toInt()
 
-                editor.caretModel.moveToLogicalPosition(LogicalPosition(startLine, 0))
-                val startOffset = editor.caretModel.offset
-                editor.caretModel.moveToLogicalPosition(LogicalPosition(endLine + 1, 0))
-                val endOffset = editor.caretModel.offset - 1
-                selection.setSelection(startOffset, endOffset)
-                editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
-                IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
+                RangeCommand.moveAndUpdateSelection(editor, startLine, endLine, selection)
             }
         }
 

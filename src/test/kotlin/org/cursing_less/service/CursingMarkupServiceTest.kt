@@ -3,15 +3,13 @@ package org.cursing_less.service
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Inlay
-import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
-import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
-import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
+import org.cursing_less.util.CursingTestUtils
 import org.cursing_less.util.OffsetDistanceComparator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,19 +19,11 @@ import org.junit.jupiter.api.Test
 
 class CursingMarkupServiceTest {
 
-    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
 
     @BeforeEach
     fun setUp() {
-        CursingApplicationListener.skipServer = true
-
-        projectTestFixture =
-            IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "foo")
-                .fixture
-
-        codeInsightFixture = IdeaTestFixtureFactory.getFixtureFactory().createCodeInsightFixture(projectTestFixture)
-        codeInsightFixture.setUp()
+        codeInsightFixture = CursingTestUtils.setupTestFixture()
     }
 
     @AfterEach
@@ -89,15 +79,15 @@ class CursingMarkupServiceTest {
     fun testOffsetDistanceComparatorWithCustomObjects() {
         // Create mock tokens at different offsets
         val tokens = listOf(
-            CursingMarkupService.CursingToken(100, 102, "a"),
-            CursingMarkupService.CursingToken(50, 52, "b"),
-            CursingMarkupService.CursingToken(80, 82, "c"),
-            CursingMarkupService.CursingToken(30, 32, "d"),
-            CursingMarkupService.CursingToken(120, 122, "e")
+            CursingTokenService.CursingToken(100, 102, "a"),
+            CursingTokenService.CursingToken(50, 52, "b"),
+            CursingTokenService.CursingToken(80, 82, "c"),
+            CursingTokenService.CursingToken(30, 32, "d"),
+            CursingTokenService.CursingToken(120, 122, "e")
         )
 
         // Test with cursor at offset 75
-        val comparator75 = OffsetDistanceComparator<CursingMarkupService.CursingToken>(75) { it.startOffset }
+        val comparator75 = OffsetDistanceComparator<CursingTokenService.CursingToken>(75) { it.startOffset }
         val sorted75 = tokens.sortedWith(comparator75)
 
         // Expected order based on distance from 75:

@@ -49,13 +49,9 @@ class CursingOffsetCommandTest {
         //and we can get the shape and color at offset 5 (tied to bar)
         val colorAndShape = CursingTestUtils.getCursingColorShape(editor, 5)
         assertNotNull(colorAndShape)
-        // map to numbers
-        val cursingPreferenceService = ApplicationManager.getApplication().service<CursingPreferenceService>()
-        val colorNumber = cursingPreferenceService.mapToCode(colorAndShape!!.color)
-        val shapeNumber = cursingPreferenceService.mapToCode(colorAndShape.shape)
 
         // when we run the offset command with the numbers and character
-        val response = CursingOffsetCommand.run(listOf("$colorNumber", "$shapeNumber", "b"), project, editor)
+        val response = CursingOffsetCommand.run(listOf("${colorAndShape?.color?.name}", "${colorAndShape?.shape?.name}", "b"), project, editor)
 
         // it works
         assertTrue(response.responseCode == 200)

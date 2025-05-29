@@ -1,13 +1,17 @@
 package org.cursing_less.util
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
+import kotlinx.coroutines.runBlocking
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
+import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 
 /**
@@ -21,8 +25,6 @@ object CursingTestUtils {
      * @return The configured CodeInsightTestFixture
      */
     fun setupTestFixture(): CodeInsightTestFixture {
-        CursingApplicationListener.skipServer = true
-
         val projectTestFixture =
             IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "foo")
                 .fixture
@@ -38,8 +40,15 @@ object CursingTestUtils {
      * @param codeInsightFixture The fixture to tear down
      */
     fun tearDownTestFixture(codeInsightFixture: CodeInsightTestFixture) {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
+        try {
+            runBlocking {
+                ApplicationManager.getApplication().getService(CursingMarkupService::class.java).processExistingWork()
+            }
+            runInEdtAndWait(true) {
+                codeInsightFixture.tearDown()
+            }
+        } catch (e: Exception) {
+            thisLogger().error("Failed to tear down test fixture", e)
         }
     }
 
@@ -56,7 +65,7 @@ object CursingTestUtils {
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
 
             data = editor.inlayModel.getInlineElementsInRange(offset, offset)
-                .firstNotNullOf { it.getUserData(INLAY_KEY) }
+                .firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
         }
         return data
     }

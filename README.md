@@ -18,9 +18,9 @@ Cursing_less_talon provides details about the usage and available commands.
 ### Note: this assumes that you have Talon installed and running along with [Talonhub/community](https://github.com/talonhub/community).
 1. Install this plugin in IntelliJ. You may build or install from 
 the IntelliJ Marketplace (see link above). When building use the following steps:
-   2. `./gradlew clean buildPlugin` (Mac or Linux a gradlew.bat is provided for windows)
-   3. Browse to Plugins in Settings and click the gear.
-   4. Select 'Install Plugin From Disk...'
-   5. Browse to the generated plugin jar and select it (cursing_less/build/)
+   1. `./gradlew clean buildPlugin` (Mac or Linux a gradlew.bat is provided for windows)
+   2. Browse to Plugins in Settings and click the gear.
+   3. Select 'Install Plugin From Disk...'
+   4. Browse to the generated plugin jar and select it (cursing_less/build/)
 2. Clone [cursing_less_talon](https://github.com/msedgren/cursing_less_talon) to `~/.talon/user`  
 

@@ -26,4 +26,20 @@ sealed interface CursingShape {
     data object X : CursingShape {
         override val name = "x"
     }
+
+    data object Triangle : CursingShape {
+        override val name = "triangle"
+    }
+
+    data object Star : CursingShape {
+        override val name = "star"
+    }
+
+    data object Crescent : CursingShape {
+        override val name = "crescent"
+    }
+
+    data object Heart : CursingShape {
+        override val name = "heart"
+    }
 }

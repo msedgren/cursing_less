@@ -29,5 +29,11 @@
                                  instance="org.cursing_less.settings.CursingPreferenceConfigurable"
                                  id="org.cursing_less.settings.CursingPreferenceConfigurable"
                                  key="cursing_less.settings.display_name"/>
+
+        <!-- Tool Windows -->
+        <toolWindow id="Cursing Marks"
+                    anchor="bottom"
+                    factoryClass="org.cursing_less.toolwindow.CursingMarksToolWindowFactory"
+                    icon="/icons/cursingMarksToolWindow.svg"/>
     </extensions>
 </idea-plugin>

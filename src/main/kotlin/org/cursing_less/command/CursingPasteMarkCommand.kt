@@ -18,6 +18,14 @@ import org.cursing_less.service.CursingMarkupService
  */
 data object CursingPasteMarkCommand : VoiceCommand {
 
+    private val markStorageService: CursingMarkStorageService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
+    }
+
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_paste_mark"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -75,7 +83,6 @@ data object CursingPasteMarkCommand : VoiceCommand {
      * @return The marked text, or null if not found or empty
      */
     private fun getMarkedText(markNumber: Int): String? {
-        val markStorageService = ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
         val markedText = markStorageService.getMarkedText(markNumber)
         return if (markedText.isNullOrEmpty()) null else markedText
     }
@@ -136,7 +143,6 @@ data object CursingPasteMarkCommand : VoiceCommand {
      * @param editor The editor instance
      */
     private suspend fun updateMarkup(editor: Editor) {
-        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
     }
 

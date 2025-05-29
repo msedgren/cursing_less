@@ -28,10 +28,7 @@ Cursing_Less is an IntelliJ IDEA plugin that enhances coding with voice recognit
 4. **Dependencies**: The plugin requires [cursing_less_talon](https://github.com/msedgren/cursing_less_talon) and [Talonhub/community](https://github.com/talonhub/community) to function properly.
 
 ## Testing
-When implementing changes, run the relevant tests to verify functionality:
-```
-run_test src/test/kotlin/org/cursing_less/service/CursingColorShapeLookupServiceTest.kt
-```
+When implementing changes, run the relevant tests to verify functionality and add new tests
 
 ## Building
 Before submitting changes, build the project to ensure it compiles correctly:

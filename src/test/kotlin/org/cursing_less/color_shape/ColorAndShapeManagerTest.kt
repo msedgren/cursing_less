@@ -55,7 +55,7 @@ class ColorAndShapeManagerTest {
         // then it should shrink the first
         val first = manager.consumedAtOffset(0)
         assertNotNull(first)
-        assertEquals(ColorAndShapeManager.ConsumedData(first!!.colorShape, 0, "Let us", "Let us remember"), first)
+        assertEquals(ColorAndShapeManager.ConsumedData(first!!.colorShape, 0, "Let us ", "Let us remember"), first)
         // and the last should also be correct
         val last = manager.consumedAtOffset(7)
         assertNotNull(last)
@@ -79,7 +79,7 @@ class ColorAndShapeManagerTest {
         // and the last should also be correct
         val last = manager.consumedAtOffset(16)
         assertNotNull(last)
-        assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 16, "how the", "how the sky"), last)
+        assertEquals(ColorAndShapeManager.ConsumedData(last!!.colorShape, 16, "how the ", "how the sky"), last)
     }
 
 
@@ -128,5 +128,98 @@ class ColorAndShapeManagerTest {
         assertEquals(573, manager.find(color, true, 567)?.startOffset)
         assertEquals(578, manager.find(color, true, 573)?.startOffset)
         assertNull(manager.find(color, true, 578))
+    }
+
+    @Test
+    fun testFindTokenContainingOffset() {
+        // given a color and shape manager
+        val manager = ColorAndShapeManager(colors, shapes)
+
+        // and we consume some tokens
+        val token1 = "hello"
+        val token2 = "world"
+        val token3 = "testing"
+
+        manager.consume(10, token1)
+        manager.consume(20, token2)
+        manager.consume(30, token3)
+
+        // Test finding token when cursor is at the start of a token
+        val foundAtStart = manager.findTokenContainingOffset(10)
+        assertNotNull(foundAtStart)
+        assertEquals(10, foundAtStart?.startOffset)
+
+        // Test finding token when cursor is in the middle of a token
+        val foundInMiddle = manager.findTokenContainingOffset(22)
+        assertNotNull(foundInMiddle)
+        assertEquals(20, foundInMiddle?.startOffset)
+
+        // Test finding token when cursor is at the end of a token (but not past it)
+        val foundAtEnd = manager.findTokenContainingOffset(34)
+        assertNotNull(foundAtEnd)
+        assertEquals(30, foundAtEnd?.startOffset)
+
+        // Test when cursor is not within any token
+        assertNull(manager.findTokenContainingOffset(5))  // Before first token
+        assertNull(manager.findTokenContainingOffset(16)) // Between tokens
+        assertNull(manager.findTokenContainingOffset(38)) // After last token
+    }
+
+    @Test
+    fun testFreeWithStartOverlaps() {
+        // Given some imaginary text that we are pretending to navigate and mark
+        // "Let us remember how the sky went dark."
+        // and a manager
+        val manager = ColorAndShapeManager(colors, shapes)
+
+        // First consume "Let us remember"
+        manager.consume(0, "Let us remember")
+
+        // Then consume "remember" which will overlap with the first token
+        manager.consume(7, "remember")
+
+        // Verify the first token was truncated
+        val firstBeforeFree = manager.consumedAtOffset(0)
+        assertNotNull(firstBeforeFree)
+        assertEquals("Let us ", firstBeforeFree?.consumedText)
+        assertEquals("Let us remember", firstBeforeFree?.originalText)
+
+        // Now free the second token
+        manager.free(7)
+
+        // Verify the first token is restored to its original text
+        val firstAfterFree = manager.consumedAtOffset(0)
+        assertNotNull(firstAfterFree)
+        assertEquals("Let us remember", firstAfterFree?.consumedText)
+        assertEquals("Let us remember", firstAfterFree?.originalText)
+    }
+
+    @Test
+    fun testFreeWithEndOverlaps() {
+        // Given some imaginary text that we are pretending to navigate and mark
+        // "Let us remember how the sky went dark."
+        // and a manager
+        val manager = ColorAndShapeManager(colors, shapes)
+
+        // First consume "sky went dark."
+        manager.consume(24, "sky went dark.")
+
+        // Then consume "how the sky" which will overlap with the first token
+        manager.consume(16, "how the sky")
+
+        // Verify the second token was truncated
+        val secondBeforeFree = manager.consumedAtOffset(16)
+        assertNotNull(secondBeforeFree)
+        assertEquals("how the ", secondBeforeFree?.consumedText)
+        assertEquals("how the sky", secondBeforeFree?.originalText)
+
+        // Now free the first token
+        manager.free(24)
+
+        // Verify the second token is restored to its original text
+        val secondAfterFree = manager.consumedAtOffset(16)
+        assertNotNull(secondAfterFree)
+        assertEquals("how the sky", secondAfterFree?.consumedText)
+        assertEquals("how the sky", secondAfterFree?.originalText)
     }
 }

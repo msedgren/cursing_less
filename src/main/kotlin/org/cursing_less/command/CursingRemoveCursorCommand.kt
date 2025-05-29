@@ -11,6 +11,10 @@ import org.cursing_less.service.CursingMarkupService
 
 data object CursingRemoveCursorCommand : VoiceCommand {
 
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_remove_cursor"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -26,8 +30,6 @@ data object CursingRemoveCursorCommand : VoiceCommand {
                     editor.caretModel.removeCaret(carets[cursorToRemove - 1])
                     val primaryOffset = editor.caretModel.primaryCaret.offset
                     // Update the markup to reflect the changes
-                    val cursingMarkupService =
-                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
                     cursingMarkupService.updateCursingTokens(editor, primaryOffset)
                     CursingCommandService.OkayResponse
                 } else {

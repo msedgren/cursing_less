@@ -29,8 +29,13 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
     private val colorItems = mutableMapOf<String, ColorItem>()
     private val shapesPanel = JPanel(FlowLayout(FlowLayout.LEFT))
     private val shapeCheckboxes = mutableMapOf<String, JBCheckBox>()
-    private val scaleSpinner = JSpinner(SpinnerNumberModel(state.scale, 0.1, 2.0, 0.1))
+    private val scaleSpinner = JSpinner(SpinnerNumberModel(state.scale,
+        0.01,
+        1.5,
+        0.01))
     private val tokenPatternField = JBTextField(state.tokenPattern)
+    private val usePsiTreeCheckbox = JBCheckBox(MyBundle.message("cursing_less.settings.label.use_psi_tree"), state.usePsiTree)
+    private val useRegexCheckbox = JBCheckBox(MyBundle.message("cursing_less.settings.label.use_regex"), state.useRegex)
 
     // New color components
     private val newColorNameField = JBTextField()
@@ -91,14 +96,14 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         ) {
             gbc.gridx = gridX
             gbc.gridy = 0
-            gbc.weightx = 0.0 // Take up remaining space
+            gbc.weightx = 0.0 // Take up the remaining space
             gbc.insets = JBUI.insetsRight(20)
             colorPanel.selectedColor = color
             panel.add(colorPanel, gbc)
         }
 
         private fun addColorLabel(gbc: GridBagConstraints, panel: JPanel, gridX: Int, labelText: String) {
-            val label = JLabel("")
+            val label = JLabel(labelText)
             label.preferredSize = Dimension(80, label.preferredSize.height)
             gbc.gridx = gridX
             gbc.gridy = 0
@@ -214,6 +219,18 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
                 .resizableColumn()
                 .comment(MyBundle.message("cursing_less.settings.comment.token_pattern"))
         }
+
+        row {
+            cell(usePsiTreeCheckbox)
+                .align(Align.FILL)
+                .comment("Enable token finding using PSI tree")
+        }
+
+        row {
+            cell(useRegexCheckbox)
+                .align(Align.FILL)
+                .comment("Enable token finding using regex pattern")
+        }
     }
 
 
@@ -256,7 +273,9 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         return shapesChanged ||
                 currentColors != state.colors ||
                 (scaleSpinner.value as Double) != state.scale ||
-                tokenPatternField.text != state.tokenPattern
+                tokenPatternField.text != state.tokenPattern ||
+                usePsiTreeCheckbox.isSelected != state.usePsiTree ||
+                useRegexCheckbox.isSelected != state.useRegex
     }
 
     fun generateUpdatedState(): CursingPreferenceState {
@@ -266,8 +285,10 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         }
         val scale = scaleSpinner.value as Double
         val tokenPattern = tokenPatternField.text
+        val usePsiTree = usePsiTreeCheckbox.isSelected
+        val useRegex = useRegexCheckbox.isSelected
 
-        return CursingPreferenceState(colors, shapes, scale, tokenPattern)
+        return CursingPreferenceState(colors, shapes, scale, tokenPattern, usePsiTree, useRegex)
     }
 
     /**
@@ -303,6 +324,8 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
         // Reset other settings
         scaleSpinner.value = state.scale
         tokenPatternField.text = state.tokenPattern
+        usePsiTreeCheckbox.isSelected = state.usePsiTree
+        useRegexCheckbox.isSelected = state.useRegex
     }
 
     /**

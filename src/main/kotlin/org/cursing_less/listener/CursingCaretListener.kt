@@ -19,6 +19,13 @@ import org.cursing_less.service.CursingUserInteractionService
 
 class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretListener {
 
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
+    private val cursingUserInteractionService: CursingUserInteractionService by lazy {
+        ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
+    }
+
     companion object {
         private const val MOVED_KEY_NAME = "CURSING_MOVED"
 
@@ -35,8 +42,6 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
                 if (event.newPosition.line == event.oldPosition.line && event.newPosition.column == event.oldPosition.column) {
                     moveDirection = handleMovementAtSameOffset(event, editor, caret, cursorOffset)
                 }
-                val cursingMarkupService =
-                    ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
                 cursingMarkupService.updateCursingTokens(event.editor, cursorOffset)
             }
             editor.putUserData(MOVED_KEY, moveDirection)
@@ -50,15 +55,11 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
         cursorOffset: Int
     ): MoveDirection? {
         val inlays = editor.inlayModel.getInlineElementsInRange(caret.offset, caret.offset)
-        val cursingUserInteractionService =
-            ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
-        val service =
-            ApplicationManager.getApplication().getService(CursingUserInteractionService::class.java)
-        val directionState = service.direction
+        val directionState = cursingUserInteractionService.direction
         val last = editor.getUserData(MOVED_KEY)
         val move = getMoveDirection(directionState)
-        // Only considering moving the caret if we're not currently making a selection and
-        // we have not already adjusted for this move or adjusted for this offset or are moving in a different direction
+        // Only considering moving the caret if we're not currently making a selection, and
+        // we have not yet adjusted for this move or adjusted for this offset or are moving in a different direction
         if (!cursingUserInteractionService.leftMouseSelected && (last == null || last.offset != cursorOffset || last.assistAmount != move)) {
             val data = inlays.firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
             // Check if there's any inlay in the direction of movement that doesn't have INLAY_KEY
@@ -98,6 +99,7 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
         val cursorPosition = editor.visualPositionToXY(editor.offsetToVisualPosition(cursorOffset)).x
         // Check for any inlay in that range without INLAY_KEY
         editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
+            .asSequence()
             .filter { it.getUserData(INLAY_KEY) == null }
             .map { editor.visualPositionToXY(it.visualPosition) }
             .map { it.x }
@@ -116,8 +118,6 @@ class CursingCaretListener(private val coroutineScope: CoroutineScope) : CaretLi
 
     override fun caretAdded(event: CaretEvent) {
         coroutineScope.launch(Dispatchers.EDT) {
-            val cursingMarkupService =
-                ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
             cursingMarkupService.updateCursingTokens(event.editor, event.caret?.offset ?: 0)
         }
     }

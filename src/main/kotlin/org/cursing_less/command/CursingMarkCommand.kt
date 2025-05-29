@@ -14,6 +14,10 @@ import org.cursing_less.service.CursingMarkStorageService
  */
 data object CursingMarkCommand : VoiceCommand {
 
+    private val markStorageService: CursingMarkStorageService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_mark"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -51,8 +55,6 @@ data object CursingMarkCommand : VoiceCommand {
         } else {
             // Store the selected text and its starting offset in the mark storage service
             val (selectedText, startOffset, _) = result
-            val markStorageService =
-                ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
             markStorageService.storeMarkedText(markNumber, selectedText, startOffset)
 
             return CursingCommandService.OkayResponse

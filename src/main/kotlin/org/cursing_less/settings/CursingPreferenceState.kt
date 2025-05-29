@@ -18,8 +18,10 @@ import java.awt.Color
 data class CursingPreferenceState(
     @JvmField @OptionTag(converter = ColorStateConverter::class) val colors: List<ColorState> = defaultColors,
     @JvmField @OptionTag(converter = ShapeStateConverter::class) val shapes: List<ShapeState> = defaultShapes,
-    @JvmField val scale: Double = defaultScale,
-    @JvmField val tokenPattern: String = defaultTokenPattern
+    @JvmField @OptionTag val scale: Double = DEFAULT_SCALE,
+    @JvmField @OptionTag val tokenPattern: String = DEFAULT_TOKEN_PATTERN,
+    @JvmField @OptionTag val usePsiTree: Boolean = DEFAULT_USE_PSI_TREE,
+    @JvmField @OptionTag val useRegex: Boolean = DEFAULT_USE_REGEX
 ) {
 
     companion object {
@@ -37,11 +39,20 @@ data class CursingPreferenceState(
             fromShape(CursingShape.Slash, true),
             fromShape(CursingShape.BackSlash, true),
             fromShape(CursingShape.Line, true),
-            fromShape(CursingShape.X, true)
+            fromShape(CursingShape.X, true),
+            fromShape(CursingShape.Triangle, false),
+            fromShape(CursingShape.Star, false),
+            fromShape(CursingShape.Crescent, false),
+            fromShape(CursingShape.Heart, false)
         )
-        const val defaultScale: Double = 0.7
-        const val defaultTokenPattern: String =
-            "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
+        const val DEFAULT_SCALE: Double = 0.7
+        // word characters, parens, braces, angles, square brackets, elvis, block comment start, block comment end,
+        // " or ' or ` or : or #, one or more the same non-whitespace characters that is not one of the others,
+        // and any other non-whitespace character that does not match the others
+        const val DEFAULT_TOKEN_PATTERN: String =
+             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|(([^\\w(){}<>\\[\\]\\s.\"'`:#])\\11+)|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
+        const val DEFAULT_USE_PSI_TREE: Boolean = false
+        const val DEFAULT_USE_REGEX: Boolean = true
     }
 
     /**
@@ -49,6 +60,7 @@ data class CursingPreferenceState(
      */
     fun generateCursingColors(): List<CursingColor> {
         return colors
+            .asSequence()
             .filter { it.enabled }
             .map {
                 CursingColor(
@@ -56,6 +68,7 @@ data class CursingPreferenceState(
                     it.generateJbColor()
                 )
             }
+            .toList()
     }
 
     /**
@@ -63,12 +76,14 @@ data class CursingPreferenceState(
      */
     fun generateCursingShapes(): List<CursingShape> {
         return shapes
+            .asSequence()
             .filter { it.enabled }
             .mapNotNull { shapeState ->
                 CursingShape::class.sealedSubclasses
                     .mapNotNull { it.objectInstance }
                     .firstOrNull { it.name == shapeState.name }
             }
+            .toList()
     }
 
     /**

@@ -2,41 +2,44 @@ package org.cursing_less.service
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.service
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
-import org.cursing_less.service.CursingPreferencePersistenceService
+import org.cursing_less.settings.CursingPreferenceState
 import java.util.concurrent.atomic.AtomicBoolean
 
 @Service(Service.Level.APP)
 class CursingPreferenceService {
 
     // Get the settings component instance
-    private val settingsComponent = ApplicationManager.getApplication()
-        .getService(CursingPreferencePersistenceService::class.java)
+    private val settingsComponent by lazy {
+        ApplicationManager.getApplication().getService(CursingPreferencePersistenceService::class.java)
+    }
+
+    private val testing = ApplicationManager.getApplication().isUnitTestMode
 
     // Get colors from settings
     val colors: List<CursingColor>
-        get() = settingsComponent.state.generateCursingColors()
+        get() = state.generateCursingColors()
 
     // Get shapes from settings
     val shapes: List<CursingShape>
-        get() = settingsComponent.state.generateCursingShapes()
-
-    // Generate coded colors and shapes maps
-    val codedColors: MutableMap<String, CursingColor>
-        get() = colors.withIndex().associateTo(mutableMapOf()) { Pair(encodeToColor(it.index + 1), it.value) }
-
-    val codedShapes: MutableMap<String, CursingShape>
-        get() = shapes.withIndex().associateTo(mutableMapOf()) { Pair(encodeToShape(it.index + 1), it.value) }
+        get() = state.generateCursingShapes()
 
     // Get scale from settings
     val scale: Double
-        get() = settingsComponent.state.scale
+        get() = state.scale
 
     // Get token pattern from settings
     val tokenPattern: Regex
-        get() = Regex(settingsComponent.state.tokenPattern)
+        get() = Regex(state.tokenPattern)
+
+    // Get usePsiTree flag from settings
+    val usePsiTree: Boolean
+        get() = state.usePsiTree
+
+    // Get useRegex flag from settings
+    val useRegex: Boolean
+        get() = state.useRegex
 
     private val echoCommandsAtomic = AtomicBoolean(false)
 
@@ -48,9 +51,10 @@ class CursingPreferenceService {
         echoCommandsAtomic.set(!echoCommandsAtomic.get())
     }
 
-    fun encodeToColor(given: Int) = "color_$given"
-    fun encodeToShape(given: Int) = "shape_$given"
-
-    fun mapToCode(color: CursingColor) = colors.indexOf(color) + 1
-    fun mapToCode(shape: CursingShape) = shapes.indexOf(shape) + 1
+    private val state: CursingPreferenceState
+        get() = if (!testing) {
+            settingsComponent.state
+        } else {
+            CursingPreferencePersistenceService.defaultState
+        }
 }

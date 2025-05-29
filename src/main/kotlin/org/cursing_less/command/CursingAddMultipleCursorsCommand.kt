@@ -12,6 +12,10 @@ import org.cursing_less.service.CursingMarkupService
 
 data object CursingAddMultipleCursorsCommand : VoiceCommand {
 
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+    }
+
     override fun matches(command: String) = command == "curse_add_multiple_cursors"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
@@ -52,8 +56,6 @@ data object CursingAddMultipleCursorsCommand : VoiceCommand {
                     }
 
                     // Update the markup to reflect the changes
-                    val cursingMarkupService =
-                        ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
                     cursingMarkupService.updateCursingTokens(editor, editor.caretModel.offset)
                 }
                 return CursingCommandService.OkayResponse

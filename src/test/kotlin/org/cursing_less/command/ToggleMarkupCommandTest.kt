@@ -6,18 +6,15 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.project.Project
-import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
-import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
-import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
+import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -25,20 +22,11 @@ import org.junit.jupiter.api.Test
 
 class ToggleMarkupCommandTest {
 
-
-    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
 
     @BeforeEach
     fun setUp() {
-        CursingApplicationListener.skipServer = true
-
-        projectTestFixture =
-            IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "foo")
-                .fixture
-
-        codeInsightFixture = IdeaTestFixtureFactory.getFixtureFactory().createCodeInsightFixture(projectTestFixture)
-        codeInsightFixture.setUp()
+        codeInsightFixture = CursingTestUtils.setupTestFixture()
     }
 
     @AfterEach
@@ -94,6 +82,7 @@ class ToggleMarkupCommandTest {
         project: Project,
         editor: Editor
     ) {
+        cursingMarkupService.clearExistingWork()
         ToggleMarkupCommand.run(listOf(""), project, editor)
         cursingMarkupService.processExistingWork()
     }
