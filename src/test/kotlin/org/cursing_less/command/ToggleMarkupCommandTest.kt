@@ -82,6 +82,7 @@ class ToggleMarkupCommandTest {
         project: Project,
         editor: Editor
     ) {
+        cursingMarkupService.clearExistingWork()
         ToggleMarkupCommand.run(listOf(""), project, editor)
         cursingMarkupService.processExistingWork()
     }

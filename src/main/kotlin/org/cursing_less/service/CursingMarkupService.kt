@@ -145,7 +145,14 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
     }
 
+    suspend fun clearExistingWork() {
+        withContext(Dispatchers.EDT) {
+            debouncer.clear()
+        }
+    }
+
     suspend fun processExistingWork() {
+        this.coroutineScope.coroutineContext.job.children.forEach { it.join() }
         withContext(Dispatchers.EDT) {
             debouncer.flush()
         }
@@ -270,6 +277,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
         fun flush() {
             updateQueue.flush()
+        }
+
+        fun clear() {
+            updateQueue.cancelAllUpdates()
         }
     }
 
