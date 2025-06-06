@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.util.Key
+import org.cursing_less.listener.CursingInlayListener
 import com.intellij.openapi.util.getOrCreateUserDataUnsafe
 import com.intellij.openapi.util.removeUserData
 import com.intellij.util.ui.update.MergingUpdateQueue
@@ -41,9 +42,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     companion object {
         private const val INLAY_NAME = "CURSING_INLAY"
         private const val ID_KEY_NAME = "CURSING_EDITOR_ID"
+        private const val INLAY_LISTENER_KEY_NAME = "CURSING_INLAY_LISTENER"
 
         val INLAY_KEY = Key.create<CursingColorShape>(INLAY_NAME)
         val ID_KEY = Key.create<Long>(ID_KEY_NAME)
+        private val INLAY_LISTENER_KEY = Key.create<Boolean>(INLAY_LISTENER_KEY_NAME)
 
         private val idGenerator = AtomicLong(0)
         private val unsafeDataMutex = Mutex()
@@ -136,10 +139,12 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     }
                 }
 
+                // Add inlay listener if not already added
+                addInlayListenerIfNeeded(editor)
+
                 tokens.forEach { (offset, pair) ->
                     addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
                 }
-
                 editor.contentComponent.repaint()
             }
         }
@@ -232,8 +237,19 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     ) {
         val renderer = ColoredShapeRenderer(cursingColorShape, character, offset)
 
-        editor.inlayModel.addInlineElement(offset, false, Int.MIN_VALUE, renderer)
+        editor.inlayModel.addInlineElement(offset, false, Int.MAX_VALUE, renderer)
             ?.putUserData(INLAY_KEY, cursingColorShape)
+    }
+
+    private fun addInlayListenerIfNeeded(editor: Editor) {
+        if (editor.getUserData(INLAY_LISTENER_KEY) != true) {
+            val listener = CursingInlayListener(
+                editor,
+                coroutineScope,
+            )
+            editor.inlayModel.addListener(listener, CursingPluginLifetimeDisposable.getInstance())
+            editor.putUserData(INLAY_LISTENER_KEY, true)
+        }
     }
 
 
