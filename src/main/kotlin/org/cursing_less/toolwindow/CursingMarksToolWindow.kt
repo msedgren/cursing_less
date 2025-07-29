@@ -8,6 +8,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.util.minimumHeight
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,7 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
 
     private val textArea = JTextArea().apply {
         isEditable = false
+        text = "No marks defined\n\n\n\n\n\n\n\n"
     }
     private val panel = JPanel(BorderLayout()).apply {
         add(JBScrollPane(textArea), BorderLayout.CENTER)
@@ -55,7 +57,7 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
      */
     fun initializeContent() {
         val contentFactory = ContentFactory.getInstance()
-        val content = contentFactory.createContent(panel, "Cursing Less", false)
+        val content = contentFactory.createContent(panel, "Cursing Marks", false)
         toolWindow.contentManager.addContent(content)
 
         // Update the marks displayed initially

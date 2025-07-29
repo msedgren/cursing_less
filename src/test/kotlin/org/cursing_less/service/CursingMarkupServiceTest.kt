@@ -98,4 +98,93 @@ class CursingMarkupServiceTest {
         assertEquals(30, sorted75[3].startOffset)
         assertEquals(120, sorted75[4].startOffset)
     }
+
+    @Test
+    fun testToggleEnabled() {
+        // Create a large document to test with
+        val largeContent = buildString {
+            repeat(1000) {
+                append("<tag>content</tag>\n")
+            }
+        }
+
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, largeContent)
+        val project = codeInsightFixture.project
+        val cursingMarkupService = project.service<CursingMarkupService>()
+
+        // Ensure cursing is enabled
+        runBlocking {
+            if (!cursingMarkupService.isEnabled()) {
+                cursingMarkupService.toggleEnabled()
+            }
+
+            // Update tokens
+            cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
+            cursingMarkupService.processExistingWork()
+        }
+
+        // Verify tokens are added
+        var inlays: List<Inlay<*>> = listOf()
+        runInEdtAndWait {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+                .filter { it.getUserData(INLAY_KEY) != null }
+                .toList()
+        }
+
+        // There should be tokens
+        assertTrue(inlays.isNotEmpty(), "Tokens should be added when cursing is enabled")
+
+        // Toggle cursing off
+        runBlocking {
+            cursingMarkupService.toggleEnabled()
+            cursingMarkupService.processExistingWork()
+        }
+
+        // Verify all tokens are removed
+        runInEdtAndWait {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+                .filter { it.getUserData(INLAY_KEY) != null }
+                .toList()
+        }
+
+        // There should be no tokens
+        assertTrue(inlays.isEmpty(), "All tokens should be removed when cursing is disabled")
+
+        // Toggle cursing back on
+        runBlocking {
+            cursingMarkupService.toggleEnabled()
+            cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
+            cursingMarkupService.processExistingWork()
+        }
+
+        // Verify tokens are added again
+        runInEdtAndWait {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+                .filter { it.getUserData(INLAY_KEY) != null }
+                .toList()
+        }
+
+        // There should be tokens again
+        assertTrue(inlays.isNotEmpty(), "Tokens should be added when cursing is re-enabled")
+
+        // Toggle cursing off again
+        runBlocking {
+            cursingMarkupService.toggleEnabled()
+            cursingMarkupService.processExistingWork()
+        }
+
+        // Verify all tokens are removed again
+        runInEdtAndWait {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+                .filter { it.getUserData(INLAY_KEY) != null }
+                .toList()
+        }
+
+        // There should be no tokens again
+        assertTrue(inlays.isEmpty(), "All tokens should be removed when cursing is disabled again")
+    }
 }

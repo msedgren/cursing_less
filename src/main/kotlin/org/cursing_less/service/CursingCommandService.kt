@@ -73,12 +73,13 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
             "PyCharm" to 8658, //PyCharm
             "PyCharmCE" to 8658, //PyCharm Community
             "PyCharmEdu" to 8658, // PyCharm Edu
+            "GoLand" to 8659, // GoLand
+            "Rider" to 8660, // Rider
             "RubyMine" to 8661, //RubyMine
             "PhpStorm" to 8662, //PhpStorm
             "WebStorm" to 8663, // WebStorm
             "DataGrip" to 8664, // DataGrip
-            "Rider" to 8660, // Rider
-            "GoLand" to 8659, // GoLand
+            "RustRover" to 8665, // Rust Rover
         )
 
         /**

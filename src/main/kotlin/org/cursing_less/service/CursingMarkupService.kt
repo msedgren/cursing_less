@@ -8,7 +8,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.util.Key
-import org.cursing_less.listener.CursingInlayListener
 import com.intellij.openapi.util.getOrCreateUserDataUnsafe
 import com.intellij.openapi.util.removeUserData
 import com.intellij.util.ui.update.MergingUpdateQueue
@@ -28,12 +27,18 @@ import java.util.concurrent.atomic.AtomicLong
 class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
 
     private val debouncer by lazy {
-        Debouncer(250, coroutineScope)
+        Debouncer(125, coroutineScope)
     }
     private val enabled = AtomicBoolean(true)
+
+    fun isEnabled(): Boolean {
+        return enabled.get()
+    }
+
     private val preferenceService: CursingPreferenceService by lazy {
         ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
     }
+
     private val tokenService: CursingTokenService by lazy {
         ApplicationManager.getApplication().getService(CursingTokenService::class.java)
     }
@@ -45,7 +50,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         private const val INLAY_LISTENER_KEY_NAME = "CURSING_INLAY_LISTENER"
 
         val INLAY_KEY = Key.create<CursingColorShape>(INLAY_NAME)
-        val ID_KEY = Key.create<Long>(ID_KEY_NAME)
+        val ID_KEY = Key.create<DebounceEditorState>(ID_KEY_NAME)
         private val INLAY_LISTENER_KEY = Key.create<Boolean>(INLAY_LISTENER_KEY_NAME)
 
         private val idGenerator = AtomicLong(0)
@@ -66,15 +71,19 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     suspend fun toggleEnabled() {
         enabled.set(!enabled.get())
+        debouncer.clear()
 
         withContext(Dispatchers.EDT) {
             EditorFactory.getInstance().allEditors.forEach { editor ->
                 if (enabled.get()) {
                     updateCursingTokens(editor, editor.caretModel.offset)
                 } else {
+                    // Use the debouncer to handle token removal to avoid race conditions
+                    // when tokens are in the middle of being updated
                     removeAllCursingTokens(editor)
                 }
             }
+            debouncer.flush()
         }
     }
 
@@ -117,7 +126,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     oldConsumedList.forEach { (inlay, consumedCursing) ->
                         if (inlay.isValid) {
                             val wanted = tokens[offset]
-                            if (found || wanted == null || wanted.second != consumedCursing) {
+                            val otherInlaysPresent = editor.inlayModel.getInlineElementsInRange(offset, offset)
+                                .asSequence()
+                                .filter { it.isValid && it.getUserData(INLAY_KEY) == null }
+                                .any()
+                            if (found || wanted == null || wanted.second != consumedCursing || otherInlaysPresent) {
                                 inlay.dispose()
                             } else {
                                 inlay.repaint()
@@ -138,9 +151,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                         tokens.remove(cursorOffset)
                     }
                 }
-
-                // Add inlay listener if not already added
-                addInlayListenerIfNeeded(editor)
 
                 tokens.forEach { (offset, pair) ->
                     addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
@@ -179,10 +189,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     private suspend fun removeAllCursingTokensNow(editor: Editor) {
-        withContext(Dispatchers.EDT) {
-            if (!editor.isDisposed) {
-                val existingInlays = pullExistingInlays(editor)
-                if (existingInlays.isNotEmpty()) {
+        if (!editor.isDisposed) {
+            val existingInlays = pullExistingInlays(editor)
+            if (existingInlays.isNotEmpty()) {
+                withContext(Dispatchers.EDT) {
                     editor.inlayModel.execute(false) {
                         existingInlays
                             .asSequence()
@@ -201,7 +211,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     private suspend fun pullExistingInlays(editor: Editor): List<Pair<Inlay<*>, CursingColorShape>> {
-        return pullExistingInlaysByOffset(editor).values.toList().flatten()
+        return pullExistingInlaysByOffset(editor)
+            .asSequence()
+            .map { it.value }
+            .flatten()
+            .toList()
     }
 
     private suspend fun pullExistingInlaysByOffset(editor: Editor): Map<Int, List<Pair<Inlay<*>, CursingColorShape>>> {
@@ -223,10 +237,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
     }
 
-    private suspend fun createAndSetId(editor: Editor): Long {
+    private suspend fun createAndSetId(editor: Editor): DebounceEditorState {
         unsafeDataMutex.withLock {
             return editor.getOrCreateUserDataUnsafe(ID_KEY) {
-                idGenerator.getAndIncrement()
+                DebounceEditorState(idGenerator.getAndIncrement(), AtomicInteger(0))
             }
         }
     }
@@ -241,17 +255,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             ?.putUserData(INLAY_KEY, cursingColorShape)
     }
 
-    private fun addInlayListenerIfNeeded(editor: Editor) {
-        if (editor.getUserData(INLAY_LISTENER_KEY) != true) {
-            val listener = CursingInlayListener(
-                editor,
-                coroutineScope,
-            )
-            editor.inlayModel.addListener(listener, CursingPluginLifetimeDisposable.getInstance())
-            editor.putUserData(INLAY_LISTENER_KEY, true)
-        }
-    }
-
+    data class DebounceEditorState(val id: Long, val processing: AtomicInteger)
 
     class Debouncer(
         delay: Int,
@@ -259,25 +263,23 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     ) : Disposable {
         private val updateQueue = MergingUpdateQueue("cursing_less_debounce", delay, true, null)
 
-        companion object {
-            private val processing = AtomicInteger(0)
-        }
-
-        fun debounce(operation: String, editorId: Long, function: suspend () -> Unit) {
-            val task = object : Update("${operation}_${editorId}") {
+        fun debounce(operation: String, debounceEditorState: DebounceEditorState, function: suspend () -> Unit) {
+            val task = object : Update("${operation}_${debounceEditorState.id}") {
                 override fun run() {
                     if (CursingApplicationListener.handler.initialized.get()) {
                         coroutineScope.launch {
                             try {
                                 // If there is already a processing operation, do not start another one, wait and run later.
-                                val count = processing.incrementAndGet()
+                                val count = debounceEditorState.processing.incrementAndGet()
                                 if (count <= 1) {
                                     function()
                                 } else {
-                                    debounce(operation, editorId, function)
+                                    ApplicationManager.getApplication().invokeLater {
+                                        debounce(operation, debounceEditorState, function)
+                                    }
                                 }
                             } finally {
-                                processing.decrementAndGet()
+                                debounceEditorState.processing.decrementAndGet()
                             }
                         }
                     }
