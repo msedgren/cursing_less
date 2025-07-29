@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
+
 @Service(Service.Level.APP)
 class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
 
@@ -47,11 +48,9 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     companion object {
         private const val INLAY_NAME = "CURSING_INLAY"
         private const val ID_KEY_NAME = "CURSING_EDITOR_ID"
-        private const val INLAY_LISTENER_KEY_NAME = "CURSING_INLAY_LISTENER"
 
         val INLAY_KEY = Key.create<CursingColorShape>(INLAY_NAME)
         val ID_KEY = Key.create<DebounceEditorState>(ID_KEY_NAME)
-        private val INLAY_LISTENER_KEY = Key.create<Boolean>(INLAY_LISTENER_KEY_NAME)
 
         private val idGenerator = AtomicLong(0)
         private val unsafeDataMutex = Mutex()
