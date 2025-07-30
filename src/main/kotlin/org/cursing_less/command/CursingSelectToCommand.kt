@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingSelectionService
-import org.cursing_less.command.TokenPosition
 
 data object CursingSelectToCommand : VoiceCommand {
 

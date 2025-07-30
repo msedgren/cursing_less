@@ -3,20 +3,20 @@ package org.cursing_less.service
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.runInEdtAndWait
+import com.intellij.ui.JBColor
+import com.intellij.util.application
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
-import org.junit.jupiter.api.Assertions.*
+import org.cursing_less.util.CursingTestUtils
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
-import com.intellij.ui.JBColor
-import com.intellij.util.application
-import org.cursing_less.util.CursingTestUtils
-import org.junit.jupiter.api.AfterEach
 
 class CursingTokenServiceTest {
 

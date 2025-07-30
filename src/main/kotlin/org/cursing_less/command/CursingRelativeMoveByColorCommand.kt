@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingColorShapeLookupService
 import org.cursing_less.service.CursingCommandService
-import org.cursing_less.command.TokenPosition
 
 @Suppress("unused")
 data object CursingRelativeMoveByColorCommand : VoiceCommand {

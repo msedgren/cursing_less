@@ -22,7 +22,6 @@ import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.util.OffsetDistanceComparator
-import kotlin.collections.putAll
 
 /**
  * Service responsible for finding and processing tokens in text and a PsiTree.
