@@ -31,7 +31,7 @@
                                  key="cursing_less.settings.display_name"/>
 
         <!-- Tool Windows -->
-        <toolWindow id="Cursing Less"
+        <toolWindow id="cursing_less_marks_window"
                     anchor="bottom"
                     factoryClass="org.cursing_less.toolwindow.CursingMarksToolWindowFactory"
                     icon="/icons/cursingMarksToolWindow.svg"/>

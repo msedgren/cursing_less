@@ -74,7 +74,7 @@ class ColoredShapeRenderer(
             val xy = editor.visualPositionToXY(visualPos)
 
             // Account for existing inlays at this position
-            xy.x + existingInlayWidth + 3
+            targetRegion.x + existingInlayWidth + 3
         } else {
             targetRegion.x
         }

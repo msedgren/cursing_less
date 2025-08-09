@@ -4,24 +4,27 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.getOrCreateUserDataUnsafe
 import com.intellij.openapi.util.removeUserData
-import com.intellij.util.ui.update.MergingUpdateQueue
-import com.intellij.util.ui.update.Update
+import com.intellij.platform.util.coroutines.flow.debounceBatch
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.cancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColorShape
-import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.renderer.ColoredShapeRenderer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration.Companion.milliseconds
 
 
 @Service(Service.Level.APP)
@@ -58,7 +61,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     override fun dispose() {
         enabled.set(false)
-        debouncer.dispose()
         ApplicationManager.getApplication().executeOnPooledThread {
             runBlocking {
                 EditorFactory.getInstance().allEditors.forEach { editor ->
@@ -70,11 +72,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
     suspend fun toggleEnabled() {
         enabled.set(!enabled.get())
-        debouncer.clear()
+        val currentEnabled = enabled.get()
 
         withContext(Dispatchers.EDT) {
             EditorFactory.getInstance().allEditors.forEach { editor ->
-                if (enabled.get()) {
+                if (currentEnabled) {
                     updateCursingTokens(editor, editor.caretModel.offset)
                 } else {
                     // Use the debouncer to handle token removal to avoid race conditions
@@ -82,7 +84,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     removeAllCursingTokens(editor)
                 }
             }
-            debouncer.flush()
         }
     }
 
@@ -101,7 +102,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     suspend fun updateCursingTokens(editor: Editor, cursorOffset: Int) {
-        debouncer.debounce("update", createAndSetId(editor), suspend {
+        debouncer.debounce(true, createAndSetId(editor), suspend {
             updateCursingTokensNow(editor, cursorOffset)
         })
     }
@@ -119,7 +120,10 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             val tokens = tokenService.findCursingTokens(editor, cursorOffset, colorAndShapeManager, existingInlays)
                 .toMutableMap()
 
-            withContext(Dispatchers.EDT) {
+            withContext(Dispatchers.EDT + NonCancellable) {
+                // Build operation batches
+                val toDispose = mutableListOf<Inlay<*>>()
+                val toRepaint = mutableListOf<Inlay<*>>()
                 existingInlays.forEach { (offset, oldConsumedList) ->
                     var found = false
                     oldConsumedList.forEach { (inlay, consumedCursing) ->
@@ -130,9 +134,9 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                                 .filter { it.isValid && it.getUserData(INLAY_KEY) == null }
                                 .any()
                             if (found || wanted == null || wanted.second != consumedCursing || otherInlaysPresent) {
-                                inlay.dispose()
+                                toDispose.add(inlay)
                             } else {
-                                inlay.repaint()
+                                toRepaint.add(inlay)
                                 found = true
                                 tokens.remove(offset)
                             }
@@ -140,38 +144,34 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     }
                 }
 
-
+                // Exclude current caret position if other inlays are present at that offset
                 if (tokens.contains(cursorOffset)) {
-                    // exclude the current positon if there are multiple inlays to prevent
-                    // the current position from being removed when the caret moves
-                    val inlays = editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
-                    if (inlays.isNotEmpty()) {
+                    val inlaysAtCursor = editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
+                    if (inlaysAtCursor.isNotEmpty()) {
                         colorAndShapeManager.free(cursorOffset)
                         tokens.remove(cursorOffset)
                     }
                 }
 
-                tokens.forEach { (offset, pair) ->
-                    addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
+                val toAdd = tokens.map { (offset, pair) -> Triple(offset, pair.first, pair.second) }
+
+                // Apply operations in a single fast, non-cancellable EDT batch: dispose -> repaint -> add
+                editor.inlayModel.execute(false) {
+                    toDispose.forEach { if (it.isValid) it.dispose() }
+                    // Repaint remaining inlays after disposals
+                    toRepaint.forEach { if (it.isValid) it.repaint() }
+                    // Add new inlays
+                    toAdd.forEach { (offset, ch, colorShape) ->
+                        addColoredShapeAboveCursingToken(editor, colorShape, offset, ch)
+                    }
                 }
                 editor.contentComponent.repaint()
             }
         }
     }
 
-    suspend fun clearExistingWork() {
-        withContext(Dispatchers.EDT) {
-            debouncer.clear()
-        }
-    }
-
-    suspend fun processExistingWork() {
-        this.coroutineScope.coroutineContext.job.children.forEach { it.join() }
-        withContext(Dispatchers.EDT) {
-            debouncer.flush()
-        }
-        this.coroutineScope.coroutineContext.job.children.forEach { it.join() }
-    }
+    fun workToProcess() = debouncer.workToProcess()
+    fun resetProcessingCount() = debouncer.resetProcessingCount()
 
     private fun editorEligibleForMarkup(editor: Editor): Boolean {
         val lineHeight = editor.lineHeight
@@ -182,7 +182,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
-        debouncer.debounce("remove", createAndSetId(editor), suspend {
+        debouncer.debounce(false, createAndSetId(editor), suspend {
             removeAllCursingTokensNow(editor)
         })
     }
@@ -239,7 +239,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     private suspend fun createAndSetId(editor: Editor): DebounceEditorState {
         unsafeDataMutex.withLock {
             return editor.getOrCreateUserDataUnsafe(ID_KEY) {
-                DebounceEditorState(idGenerator.getAndIncrement(), AtomicInteger(0))
+                DebounceEditorState(idGenerator.getAndIncrement())
             }
         }
     }
@@ -254,50 +254,66 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             ?.putUserData(INLAY_KEY, cursingColorShape)
     }
 
-    data class DebounceEditorState(val id: Long, val processing: AtomicInteger)
+    data class DebounceEditorState(val id: Long)
 
     class Debouncer(
         delay: Int,
         private val coroutineScope: CoroutineScope
-    ) : Disposable {
-        private val updateQueue = MergingUpdateQueue("cursing_less_debounce", delay, true, null)
+    ) {
+        private val flow =
+            MutableSharedFlow<Triple<Boolean, DebounceEditorState, suspend () -> Unit>>(
+                0,
+                200,
+                BufferOverflow.DROP_OLDEST
+            )
 
-        fun debounce(operation: String, debounceEditorState: DebounceEditorState, function: suspend () -> Unit) {
-            val task = object : Update("${operation}_${debounceEditorState.id}") {
-                override fun run() {
-                    if (CursingApplicationListener.handler.initialized.get()) {
-                        coroutineScope.launch {
+        private val processingCount: AtomicInteger = AtomicInteger(0)
+
+        init {
+            coroutineScope.launch(Dispatchers.Unconfined) {
+                var debouncedFlow = flow.debounceBatch(delay.milliseconds)
+                debouncedFlow
+                    .cancellable()
+                    .collect {
+                        var currentAdd = false
+                        var currentId = -1L
+                        it.forEach { (addOrRemove, state, function) ->
                             try {
-                                // If there is already a processing operation, do not start another one, wait and run later.
-                                val count = debounceEditorState.processing.incrementAndGet()
-                                if (count <= 1) {
+                                if (state.id != currentId || currentAdd != addOrRemove) {
+                                    currentAdd = addOrRemove
+                                    currentId = state.id
                                     function()
-                                } else {
-                                    ApplicationManager.getApplication().invokeLater {
-                                        debounce(operation, debounceEditorState, function)
-                                    }
                                 }
+                            } catch (e: Exception) {
+                                thisLogger().warn("Failed to process cursing markup", e)
                             } finally {
-                                debounceEditorState.processing.decrementAndGet()
+                                processingCount.decrementAndGet()
                             }
                         }
                     }
-                }
+            }.invokeOnCompletion {
+                resetProcessingCount()
             }
-            updateQueue.queue(task)
         }
 
-        override fun dispose() {
-            updateQueue.cancelAllUpdates()
-            updateQueue.dispose()
+        suspend fun debounce(
+            addOrRemove: Boolean,
+            debounceEditorState: DebounceEditorState,
+            function: suspend () -> Unit
+        ) {
+            processingCount.incrementAndGet()
+            flow.emit(Triple(addOrRemove, debounceEditorState, function))
         }
 
-        fun flush() {
-            updateQueue.flush()
+        fun workToProcess(): Boolean {
+            return processingCount.get() > 0 && coroutineScope.isActive
         }
 
-        fun clear() {
-            updateQueue.cancelAllUpdates()
+        fun resetProcessingCount() {
+            if(processingCount.get() > 0) {
+                thisLogger().error("processing count: ${processingCount.get()} reset to zero")
+            }
+            processingCount.set(0)
         }
     }
 

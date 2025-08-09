@@ -2,17 +2,20 @@ package org.cursing_less.listener
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.EditorCustomElementRenderer
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.ui.JBColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.util.CursingTestUtils
 import org.junit.jupiter.api.AfterEach
@@ -24,18 +27,21 @@ import java.awt.Rectangle
 
 class CursingCaretListenerTest {
 
+    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
     lateinit var caretListener: CursingCaretListener
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
         caretListener = CursingCaretListener(CoroutineScope(Dispatchers.Default))
     }
 
     @AfterEach
     fun tearDown() {
-        CursingTestUtils.tearDownTestFixture(codeInsightFixture)
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
@@ -118,35 +124,28 @@ class CursingCaretListenerTest {
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         cursingMarkupService.updateCursingTokensNow(editor, 0)
 
-        runInEdtAndWait {
+        withContext(Dispatchers.EDT) {
             // Initial caret position
             editor.caretModel.moveToOffset(0)
-
-            editor.inlayModel.addInlineElement(0, TestRenderer())
-
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            editor.inlayModel.addInlineElement(1, TestRenderer())
         }
+        CursingTestUtils.completeProcessing()
 
-        // Simulate a right arrow key press by moving the caret right (jiggle by going left twice at zero which goes nowhere...)
-        codeInsightFixture.performEditorAction("EditorLeft")
-        codeInsightFixture.performEditorAction("EditorLeft")
-        // note requires an extra right for other added inlay.
+        // Simulate a right arrow key press by moving the caret right
         codeInsightFixture.performEditorAction("EditorRight")
         codeInsightFixture.performEditorAction("EditorRight")
         codeInsightFixture.performEditorAction("EditorRight")
         codeInsightFixture.performEditorAction("EditorRight")
         codeInsightFixture.performEditorAction("EditorRight")
         codeInsightFixture.performEditorAction("EditorRight")
+
+        CursingTestUtils.completeProcessing()
 
         // Get the new offset
-        val newOffset = runInEdtAndGet {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-
-            editor.caretModel.offset
+        withContext(Dispatchers.EDT) {
+            // Check if the offset has changed
+            assertEquals(5, editor.caretModel.offset, "Caret offset should have increased after right arrow key press")
         }
-
-        // Check if the offset has changed
-        assertEquals(5, newOffset, "Caret offset should have increased after right arrow key press")
     }
 
     class TestRenderer() : EditorCustomElementRenderer {

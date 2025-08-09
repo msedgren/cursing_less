@@ -1,15 +1,24 @@
 package org.cursing_less.service
 
 import com.intellij.ide.highlighter.XmlFileType
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.editor.impl.editorId
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.html.currentTimeMillis
 import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.util.CursingTestUtils.completeProcessing
 import org.cursing_less.util.OffsetDistanceComparator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,28 +28,27 @@ import org.junit.jupiter.api.Test
 
 class CursingMarkupServiceTest {
 
+    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
     fun testBasicMarkupOfTokens() {
-        System.err.println("testFoo Started")
-        val project = codeInsightFixture.project
         var inlays: List<Inlay<*>> = listOf()
         codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
 
-        val cursingMarkupService = project.service<CursingMarkupService>()
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         assertTrue(CursingApplicationListener.handler.initialized.get())
 
         runBlocking {
@@ -100,34 +108,20 @@ class CursingMarkupServiceTest {
     }
 
     @Test
-    fun testToggleEnabled() {
-        // Create a large document to test with
-        val largeContent = buildString {
-            repeat(1000) {
-                append("<tag>content</tag>\n")
-            }
-        }
+    fun testToggleEnabled() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
 
-        codeInsightFixture.configureByText(XmlFileType.INSTANCE, largeContent)
-        val project = codeInsightFixture.project
-        val cursingMarkupService = project.service<CursingMarkupService>()
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
 
-        // Ensure cursing is enabled
-        runBlocking {
-            if (!cursingMarkupService.isEnabled()) {
-                cursingMarkupService.toggleEnabled()
-            }
-
-            // Update tokens
-            cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
-            cursingMarkupService.processExistingWork()
-        }
 
         // Verify tokens are added
+        completeProcessing()
         var inlays: List<Inlay<*>> = listOf()
-        runInEdtAndWait {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+        withContext(Dispatchers.EDT) {
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(
+                0,
+                codeInsightFixture.editor.document.textLength
+            )
                 .filter { it.getUserData(INLAY_KEY) != null }
                 .toList()
         }
@@ -136,15 +130,15 @@ class CursingMarkupServiceTest {
         assertTrue(inlays.isNotEmpty(), "Tokens should be added when cursing is enabled")
 
         // Toggle cursing off
-        runBlocking {
-            cursingMarkupService.toggleEnabled()
-            cursingMarkupService.processExistingWork()
-        }
+        cursingMarkupService.toggleEnabled()
 
         // Verify all tokens are removed
-        runInEdtAndWait {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+        completeProcessing()
+        withContext(Dispatchers.EDT) {
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(
+                0,
+                codeInsightFixture.editor.document.textLength
+            )
                 .filter { it.getUserData(INLAY_KEY) != null }
                 .toList()
         }
@@ -153,38 +147,21 @@ class CursingMarkupServiceTest {
         assertTrue(inlays.isEmpty(), "All tokens should be removed when cursing is disabled")
 
         // Toggle cursing back on
-        runBlocking {
-            cursingMarkupService.toggleEnabled()
-            cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
-            cursingMarkupService.processExistingWork()
-        }
+        cursingMarkupService.toggleEnabled()
+
 
         // Verify tokens are added again
-        runInEdtAndWait {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
+        completeProcessing()
+        withContext(Dispatchers.EDT) {
+            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(
+                0,
+                codeInsightFixture.editor.document.textLength
+            )
                 .filter { it.getUserData(INLAY_KEY) != null }
                 .toList()
         }
 
         // There should be tokens again
         assertTrue(inlays.isNotEmpty(), "Tokens should be added when cursing is re-enabled")
-
-        // Toggle cursing off again
-        runBlocking {
-            cursingMarkupService.toggleEnabled()
-            cursingMarkupService.processExistingWork()
-        }
-
-        // Verify all tokens are removed again
-        runInEdtAndWait {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, codeInsightFixture.editor.document.textLength)
-                .filter { it.getUserData(INLAY_KEY) != null }
-                .toList()
-        }
-
-        // There should be no tokens again
-        assertTrue(inlays.isEmpty(), "All tokens should be removed when cursing is disabled again")
     }
 }

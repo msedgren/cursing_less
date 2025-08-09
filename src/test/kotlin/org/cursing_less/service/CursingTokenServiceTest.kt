@@ -2,6 +2,7 @@ package org.cursing_less.service
 
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.ui.JBColor
 import com.intellij.util.application
@@ -20,14 +21,17 @@ import java.util.stream.Stream
 
 class CursingTokenServiceTest {
 
-    private lateinit var codeInsightFixture: CodeInsightTestFixture
+    lateinit var projectTestFixture: IdeaProjectTestFixture
+    lateinit var codeInsightFixture: CodeInsightTestFixture
     private lateinit var tokenService: CursingTokenService
     private lateinit var colorAndShapeManager: ColorAndShapeManager
 
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
 
         tokenService = application.service<CursingTokenService>()
 
@@ -46,9 +50,7 @@ class CursingTokenServiceTest {
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test

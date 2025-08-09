@@ -22,16 +22,14 @@ class CursingPasteMarkCommandTest {
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        CursingTestUtils.tearDownTestFixture(codeInsightFixture)
-
-        // Clear any stored marked text
-        val markStorageService = ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
-        markStorageService.clearAllMarkedText()
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test

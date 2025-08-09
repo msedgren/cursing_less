@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,7 @@ import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.util.CursingTestUtils.completeProcessing
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -23,17 +25,18 @@ import org.junit.jupiter.api.Test
 class ToggleMarkupCommandTest {
 
     lateinit var codeInsightFixture: CodeInsightTestFixture
+    lateinit var projectTestFixture: IdeaProjectTestFixture
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
@@ -82,9 +85,8 @@ class ToggleMarkupCommandTest {
         project: Project,
         editor: Editor
     ) {
-        cursingMarkupService.clearExistingWork()
         ToggleMarkupCommand.run(listOf(""), project, editor)
-        cursingMarkupService.processExistingWork()
+        completeProcessing()
     }
 
     private suspend fun getInlays(editor: Editor): List<Inlay<*>> {
