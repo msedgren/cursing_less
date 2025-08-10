@@ -23,6 +23,7 @@ import org.cursing_less.service.CursingMarkStorageService
 import org.cursing_less.service.CursingScopeService
 import org.cursing_less.topic.CursingMarkStorageListener
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JPanel
 import javax.swing.JTextArea
@@ -59,9 +60,13 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
 
     private val textArea = JTextArea().apply {
         isEditable = false
+        // Set a larger default size via rows to avoid tiny initial display
+        rows = 12
         text = "No marks defined\n\n\n\n\n\n\n\n"
     }
     private val panel = JPanel(BorderLayout()).apply {
+        // Provide a preferred size so the bottom tool window opens larger initially
+        preferredSize = Dimension(600, 250)
         add(JBScrollPane(textArea), BorderLayout.CENTER)
     }
 
