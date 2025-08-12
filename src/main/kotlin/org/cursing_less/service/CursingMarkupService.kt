@@ -7,7 +7,9 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
-import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.getOrCreateUserDataUnsafe
 import com.intellij.openapi.util.removeUserData
@@ -25,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
-
 
 @Service(Service.Level.APP)
 class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposable {
@@ -49,12 +50,11 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
 
     companion object {
-        private const val INLAY_NAME = "CURSING_INLAY"
-        private const val ID_KEY_NAME = "CURSING_EDITOR_ID"
+        private const val CURSING_EDITOR_STATE_NAME = "CURSING_EDITOR_STATE"
+        private const val CURSING_EDITOR_GRAPHICS_NAME = "CURSING_EDITOR_GRAPHICS"
 
-        val INLAY_KEY = Key.create<CursingColorShape>(INLAY_NAME)
-        val ID_KEY = Key.create<DebounceEditorState>(ID_KEY_NAME)
-
+        private val CURSING_EDITOR_STATE = Key.create<CursingEditorState>(CURSING_EDITOR_STATE_NAME)
+        private val CURSING_EDITOR_GRAPHICS = Key.create<CursingGraphics>(CURSING_EDITOR_GRAPHICS_NAME)
         private val idGenerator = AtomicLong(0)
         private val unsafeDataMutex = Mutex()
     }
@@ -94,76 +94,50 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
             // Update each editor
             for (editor in editors) {
-                // Remove the existing ColorAndShapeManager
-                editor.removeUserData(ColorAndShapeManager.KEY)
-                updateCursingTokens(editor, editor.caretModel.offset)
+                debouncer.debounce(DebounceTask.REFRESH, getOrCreateAndSetEditorState(editor), suspend {
+                    editor.removeUserData(CURSING_EDITOR_STATE)
+                    removeAllCursingTokensNow(editor)
+                    updateCursingTokensNow(editor, editor.caretModel.offset)
+                })
             }
         }
     }
 
     suspend fun updateCursingTokens(editor: Editor, cursorOffset: Int) {
-        debouncer.debounce(true, createAndSetId(editor), suspend {
+        debouncer.debounce(DebounceTask.ADD, getOrCreateAndSetEditorState(editor), suspend {
             updateCursingTokensNow(editor, cursorOffset)
         })
     }
 
     suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int) {
         if (enabled.get() && !editor.isDisposed && editorEligibleForMarkup(editor)) {
-            // thisLogger().trace("Updating cursing tokens for ${editor.editorKind.name} with ID ${createAndSetId(editor)}")
-            val colorAndShapeManager = createAndSetColorAndShapeManager(editor)
+            val editorState = getOrCreateAndSetEditorState(editor)
+            val colorAndShapeManager = editorState.colorAndShapeManager
             colorAndShapeManager.freeAll()
 
-            val existingInlays = withContext(Dispatchers.EDT) {
-                pullExistingInlaysByOffset(editor)
-            }
+            val existingGraphics = pullExistingGraphics(editor)
 
-            val tokens = tokenService.findCursingTokens(editor, cursorOffset, colorAndShapeManager, existingInlays)
+            val tokens = tokenService.findCursingTokens(editor, cursorOffset, colorAndShapeManager, existingGraphics)
                 .toMutableMap()
 
             withContext(Dispatchers.EDT + NonCancellable) {
                 // Build operation batches
-                val toDispose = mutableListOf<Inlay<*>>()
-                val toRepaint = mutableListOf<Inlay<*>>()
-                existingInlays.forEach { (offset, oldConsumedList) ->
-                    var found = false
-                    oldConsumedList.forEach { (inlay, consumedCursing) ->
-                        if (inlay.isValid) {
-                            val wanted = tokens[offset]
-                            val otherInlaysPresent = editor.inlayModel.getInlineElementsInRange(offset, offset)
-                                .asSequence()
-                                .filter { it.isValid && it.getUserData(INLAY_KEY) == null }
-                                .any()
-                            if (found || wanted == null || wanted.second != consumedCursing || otherInlaysPresent) {
-                                toDispose.add(inlay)
-                            } else {
-                                toRepaint.add(inlay)
-                                found = true
-                                tokens.remove(offset)
-                            }
+                val toKeep = mutableMapOf<Int, CursingGraphics>()
+                existingGraphics.forEach { (offset, existingGraphic) ->
+                    val wanted = tokens[offset]
+                    if (existingGraphic.highlighter.isValid && wanted != null && wanted.second == existingGraphic.cursingColorShape) {
+                        toKeep[offset] = existingGraphic
+                        tokens.remove(offset)
+                    } else {
+                        if (existingGraphic.highlighter.isValid) {
+                            existingGraphic.highlighter.dispose()
                         }
                     }
                 }
 
-                // Exclude current caret position if other inlays are present at that offset
-                if (tokens.contains(cursorOffset)) {
-                    val inlaysAtCursor = editor.inlayModel.getInlineElementsInRange(cursorOffset, cursorOffset)
-                    if (inlaysAtCursor.isNotEmpty()) {
-                        colorAndShapeManager.free(cursorOffset)
-                        tokens.remove(cursorOffset)
-                    }
-                }
-
-                val toAdd = tokens.map { (offset, pair) -> Triple(offset, pair.first, pair.second) }
-
-                // Apply operations in a single fast, non-cancellable EDT batch: dispose -> repaint -> add
-                editor.inlayModel.execute(false) {
-                    toDispose.forEach { if (it.isValid) it.dispose() }
-                    // Repaint remaining inlays after disposals
-                    toRepaint.forEach { if (it.isValid) it.repaint() }
-                    // Add new inlays
-                    toAdd.forEach { (offset, ch, colorShape) ->
-                        addColoredShapeAboveCursingToken(editor, colorShape, offset, ch)
-                    }
+                // Add new graphics
+                tokens.forEach { (offset, pair) ->
+                    addColoredShapeAboveCursingToken(editor, pair.second, offset, pair.first)
                 }
                 editor.contentComponent.repaint()
             }
@@ -182,86 +156,92 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
     }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
-        debouncer.debounce(false, createAndSetId(editor), suspend {
+        debouncer.debounce(DebounceTask.REMOVE, getOrCreateAndSetEditorState(editor), suspend {
             removeAllCursingTokensNow(editor)
         })
     }
 
     private suspend fun removeAllCursingTokensNow(editor: Editor) {
         if (!editor.isDisposed) {
-            val existingInlays = pullExistingInlays(editor)
-            if (existingInlays.isNotEmpty()) {
+            val editorState = getOrCreateAndSetEditorState(editor)
+            val existingGraphics = pullExistingGraphics(editor)
+            if (existingGraphics.isNotEmpty()) {
                 withContext(Dispatchers.EDT) {
-                    editor.inlayModel.execute(false) {
-                        existingInlays
-                            .asSequence()
-                            .map { it.first }
-                            .forEach {
-                                if (it.isValid) {
-                                    it.dispose()
-                                }
+                    existingGraphics.values
+                        .asSequence()
+                        .map { it.highlighter }
+                        .forEach {
+                            if (it.isValid) {
+                                it.dispose()
                             }
-                    }
+                        }
                     editor.contentComponent.repaint()
-                    editor.removeUserData(ColorAndShapeManager.KEY)
+                    editorState.colorAndShapeManager.freeAll()
                 }
             }
         }
     }
 
-    private suspend fun pullExistingInlays(editor: Editor): List<Pair<Inlay<*>, CursingColorShape>> {
-        return pullExistingInlaysByOffset(editor)
-            .asSequence()
-            .map { it.value }
-            .flatten()
-            .toList()
-    }
-
-    private suspend fun pullExistingInlaysByOffset(editor: Editor): Map<Int, List<Pair<Inlay<*>, CursingColorShape>>> {
+    suspend fun pullExistingGraphics(editor: Editor): Map<Int, CursingGraphics> {
         return withContext(Dispatchers.EDT) {
-            editor.inlayModel.getInlineElementsInRange(0, editor.document.textLength)
+            editor.markupModel.allHighlighters
                 .asSequence()
-                .filter { it.getUserData(INLAY_KEY) != null }
-                .groupBy { it.offset }
-                .mapValues { it.value.map { inlay -> Pair(inlay, inlay.getUserData(INLAY_KEY) as CursingColorShape) } }
+                .filter { it.isValid}
+                .mapNotNull { it.getUserData(CURSING_EDITOR_GRAPHICS) }
+                .associateBy { it.offset }
         }
     }
 
-
-    private suspend fun createAndSetColorAndShapeManager(editor: Editor): ColorAndShapeManager {
+    suspend fun getOrCreateAndSetEditorState(editor: Editor): CursingEditorState {
         unsafeDataMutex.withLock {
-            return editor.getOrCreateUserDataUnsafe(ColorAndShapeManager.KEY) {
-                ColorAndShapeManager(preferenceService.colors, preferenceService.shapes)
+            return editor.getOrCreateUserDataUnsafe(CURSING_EDITOR_STATE) {
+                CursingEditorState(
+                    idGenerator.getAndIncrement(),
+                    ColorAndShapeManager(preferenceService.colors, preferenceService.shapes)
+                )
             }
         }
     }
-
-    private suspend fun createAndSetId(editor: Editor): DebounceEditorState {
-        unsafeDataMutex.withLock {
-            return editor.getOrCreateUserDataUnsafe(ID_KEY) {
-                DebounceEditorState(idGenerator.getAndIncrement())
-            }
-        }
-    }
-
 
     private fun addColoredShapeAboveCursingToken(
         editor: Editor, cursingColorShape: CursingColorShape, offset: Int, character: Char
-    ) {
-        val renderer = ColoredShapeRenderer(cursingColorShape, character, offset)
-
-        editor.inlayModel.addInlineElement(offset, false, Int.MAX_VALUE, renderer)
-            ?.putUserData(INLAY_KEY, cursingColorShape)
+    ): CursingGraphics {
+        val renderer = ColoredShapeRenderer(cursingColorShape, character)
+        val highlighter = editor.markupModel.addRangeHighlighter(
+            offset,
+            offset,
+            HighlighterLayer.ADDITIONAL_SYNTAX,
+            null,
+            HighlighterTargetArea.EXACT_RANGE
+        )
+        highlighter.customRenderer = renderer
+        val graphics = CursingGraphics(cursingColorShape, character, highlighter)
+        highlighter.putUserData(CURSING_EDITOR_GRAPHICS, graphics)
+        return graphics
     }
 
-    data class DebounceEditorState(val id: Long)
+    data class CursingGraphics(
+        val cursingColorShape: CursingColorShape,
+        val character: Char,
+        val highlighter: RangeHighlighter,
+    ) {
+        val offset: Int
+            get() = highlighter.startOffset
+    }
+
+    data class CursingEditorState(
+        val id: Long,
+        val colorAndShapeManager: ColorAndShapeManager
+    )
+
+    enum class DebounceTask { ADD, REMOVE, REFRESH }
 
     class Debouncer(
         delay: Int,
         private val coroutineScope: CoroutineScope
     ) {
         private val flow =
-            MutableSharedFlow<Triple<Boolean, DebounceEditorState, suspend () -> Unit>>(
+            MutableSharedFlow<Triple<DebounceTask, CursingEditorState, suspend () -> Unit>>(
                 0,
                 200,
                 BufferOverflow.DROP_OLDEST
@@ -275,12 +255,12 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                 debouncedFlow
                     .cancellable()
                     .collect {
-                        var currentAdd = false
+                        var task: DebounceTask? = null
                         var currentId = -1L
-                        it.forEach { (addOrRemove, state, function) ->
+                        it.forEach { (currentTask, state, function) ->
                             try {
-                                if (state.id != currentId || currentAdd != addOrRemove) {
-                                    currentAdd = addOrRemove
+                                if (state.id != currentId || task != currentTask) {
+                                    task = currentTask
                                     currentId = state.id
                                     function()
                                 }
@@ -297,12 +277,12 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
 
         suspend fun debounce(
-            addOrRemove: Boolean,
-            debounceEditorState: DebounceEditorState,
+            task: DebounceTask,
+            cursingEditorState: CursingEditorState,
             function: suspend () -> Unit
         ) {
             processingCount.incrementAndGet()
-            flow.emit(Triple(addOrRemove, debounceEditorState, function))
+            flow.emit(Triple(task, cursingEditorState, function))
         }
 
         fun workToProcess(): Boolean {
@@ -310,7 +290,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         }
 
         fun resetProcessingCount() {
-            if(processingCount.get() > 0) {
+            if (processingCount.get() > 0) {
                 thisLogger().error("processing count: ${processingCount.get()} reset to zero")
             }
             processingCount.set(0)

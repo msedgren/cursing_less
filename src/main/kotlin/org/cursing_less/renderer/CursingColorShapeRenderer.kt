@@ -1,17 +1,16 @@
 package org.cursing_less.renderer
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.editor.EditorCustomElementRenderer
-import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.VisualPosition
 import com.intellij.openapi.editor.colors.EditorFontType
-import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.editor.markup.CustomHighlighterRenderer
+import com.intellij.openapi.editor.markup.RangeHighlighter
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.color_shape.CursingShape
-import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.service.CursingPreferenceService
 import java.awt.Graphics
 import java.awt.Graphics2D
-import java.awt.Rectangle
 import java.awt.geom.GeneralPath
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -21,24 +20,19 @@ import kotlin.math.sin
 class ColoredShapeRenderer(
     private val cursingColorShape: CursingColorShape,
     private val character: Char,
-    private val offset: Int,
-) : EditorCustomElementRenderer {
+) : CustomHighlighterRenderer {
 
     private val preferenceService: CursingPreferenceService by lazy {
         ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
     }
 
-    fun calculateSpace(inlay: Inlay<*>, character: Char): Pair<Int, Int> {
+    fun calculateSpace(editor: Editor, character: Char): Pair<Int, Int> {
         val textMetrics =
-            inlay.editor.contentComponent.getFontMetrics(inlay.editor.colorsScheme.getFont(EditorFontType.PLAIN))
+            editor.contentComponent.getFontMetrics(editor.colorsScheme.getFont(EditorFontType.PLAIN))
         return Pair(textMetrics.charWidth(character), textMetrics.height)
     }
 
-    override fun calcWidthInPixels(inlay: Inlay<*>): Int {
-        return 1
-    }
-
-    override fun paint(inlay: Inlay<*>, g: Graphics, targetRegion: Rectangle, textAttributes: TextAttributes) {
+    override fun paint(editor: Editor, highlighter: RangeHighlighter, g: Graphics) {
         g.color = cursingColorShape.color.color
         val paintable = when (cursingColorShape.shape) {
             CursingShape.BackSlash -> PaintableBackSlash
@@ -53,32 +47,19 @@ class ColoredShapeRenderer(
             CursingShape.Heart -> PaintableHeart
         }
 
-        val lineHeight = inlay.editor.lineHeight
-        val (characterWidth, characterHeight) = calculateSpace(inlay, character)
+        val lineHeight = editor.lineHeight
+        val (characterWidth, characterHeight) = calculateSpace(editor, character)
         val widthToUse = (characterWidth * preferenceService.scale).toInt().let { if (it % 2 == 0) it else it - 1 }
         val heightToUse = (lineHeight - characterHeight).let { if (it % 2 == 0) it else it - 1 }
         val squareSizeToUse = minOf(widthToUse, heightToUse)
-
-
-        val editor = inlay.editor
-        val existingInlayWidth =
-            editor.inlayModel.getInlineElementsInRange(offset, offset)
-                .asSequence()
-                .filter { it.getUserData(INLAY_KEY) == null }
-                .map { it.widthInPixels }
-                .firstOrNull() ?: 0
-        val adjustedX = if (existingInlayWidth > 0) {
-            // Instead of directly using offsetToXY
-            val logicalPos = editor.offsetToLogicalPosition(offset)
-            val visualPos = editor.logicalToVisualPosition(logicalPos)
-            val xy = editor.visualPositionToXY(visualPos)
-
-            // Account for existing inlays at this position
-            targetRegion.x + existingInlayWidth + 3
-        } else {
-            targetRegion.x
-        }
-
+        val offset = highlighter.startOffset
+        val visualPosition = editor.offsetToVisualPosition(offset)
+        val hasInlay = editor.inlayModel.hasInlineElementAt(offset)
+        val columnOffset = if (hasInlay) 1 else 0
+        val amountToReduce = 0
+        val targetRegion =
+            editor.visualPositionToXY(VisualPosition(visualPosition.line, visualPosition.column + columnOffset))
+        val adjustedX = targetRegion.x - amountToReduce
         paintable.paint(g, adjustedX, squareSizeToUse, targetRegion.y, squareSizeToUse)
     }
 
@@ -222,7 +203,7 @@ class ColoredShapeRenderer(
                 val angle = Math.PI / 2 + i * Math.PI / 5
                 val x = (centerX + radius * cos(angle))
                 val y = (centerY - radius * sin(angle))
-                if(!moved) {
+                if (!moved) {
                     gp.moveTo(x, y)
                     moved = true
                 } else {
@@ -277,7 +258,7 @@ class ColoredShapeRenderer(
             verticalOffset: Int,
             heightToUse: Int,
         ) {
-            val halfOfWidthToUse = (widthToUse/ 2)
+            val halfOfWidthToUse = (widthToUse / 2)
             val halfOfHeightToUse = heightToUse / 2
             val quarterOfHeightToUse = heightToUse / 4
             g.fillOval(horizontalOffset, verticalOffset, halfOfWidthToUse, halfOfHeightToUse)
@@ -291,7 +272,8 @@ class ColoredShapeRenderer(
                 intArrayOf(
                     verticalOffset + quarterOfHeightToUse,
                     verticalOffset + quarterOfHeightToUse,
-                    verticalOffset + heightToUse),
+                    verticalOffset + heightToUse
+                ),
                 3
             )
             g.fillPolygon(
@@ -303,7 +285,8 @@ class ColoredShapeRenderer(
                 intArrayOf(
                     verticalOffset + quarterOfHeightToUse + 1,
                     verticalOffset + quarterOfHeightToUse + 1,
-                    verticalOffset + heightToUse),
+                    verticalOffset + heightToUse
+                ),
                 3
             )
         }

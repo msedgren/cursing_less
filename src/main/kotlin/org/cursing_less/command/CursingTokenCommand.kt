@@ -9,12 +9,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.service.CursingCommandService
+import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.service.CursingSelectionService
 
 data object CursingTokenCommand : VoiceCommand {
 
     private val cursingSelectionService: CursingSelectionService by lazy {
         getApplication().getService(CursingSelectionService::class.java)
+    }
+
+    private val cursingMarkupService: CursingMarkupService by lazy {
+        getApplication().getService(CursingMarkupService::class.java)
     }
 
     override fun matches(command: String) = command == "curse_token"
@@ -41,8 +46,8 @@ data object CursingTokenCommand : VoiceCommand {
     }
 
     private suspend fun findTokenAtOffset(editor: Editor, offset: Int): ColorAndShapeManager.ConsumedData? {
-        return withContext(Dispatchers.EDT) { editor.getUserData(ColorAndShapeManager.KEY) }?.let {
-            it.consumedAtOffset(offset) ?: it.findTokenContainingOffset(offset)
+        return withContext(Dispatchers.EDT) { cursingMarkupService.getOrCreateAndSetEditorState(editor) }.let {
+            it.colorAndShapeManager.consumedAtOffset(offset) ?: it.colorAndShapeManager.findTokenContainingOffset(offset)
         }
     }
 }

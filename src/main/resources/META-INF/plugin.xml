@@ -19,11 +19,6 @@
                            key="cursing_less.notification.group.name"/>
         <postStartupActivity implementation="org.cursing_less.listener.CursingApplicationListener$StartupActivity"/>
 
-        <editorActionHandler action="EditorDelete"
-                             implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
-        <editorActionHandler action="EditorBackSpace"
-                             implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
-
         <!-- Settings -->
         <applicationConfigurable parentId="tools"
                                  instance="org.cursing_less.settings.CursingPreferenceConfigurable"

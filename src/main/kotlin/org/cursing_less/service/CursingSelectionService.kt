@@ -67,7 +67,7 @@ class CursingSelectionService {
         )
     }
 
-    fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
+    suspend fun find(parameters: List<String>, editor: Editor): ColorAndShapeManager.ConsumedData? {
         require(parameters.size == 3) { "Invalid parameters count: ${parameters.size}" }
         val colorShape = cursingColorShapeLookupService.parseToColorShape(parameters[0], parameters[1])
         val character = parameters[2].firstOrNull()
@@ -85,7 +85,7 @@ class CursingSelectionService {
      * @param editor The editor to operate on
      * @return The consumed data if found, null otherwise
      */
-    fun find(
+    suspend fun find(
         colorShape: CursingColorShape,
         character: Char,
         editor: Editor

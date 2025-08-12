@@ -1,7 +1,6 @@
 package org.cursing_less.color_shape
 
 import com.intellij.openapi.diagnostic.thisLogger
-import com.intellij.openapi.util.Key
 import org.cursing_less.util.OffsetDistanceComparator
 
 class ColorAndShapeManager(
@@ -19,11 +18,6 @@ class ColorAndShapeManager(
     private var offsetPreference: MutableMap<Int, CursingColorShape> = HashMap()
 
     private var characterState: MutableMap<Char, FreeCursingColorShape> = HashMap()
-
-    companion object {
-        private const val NAME = "CURSING_COLOR_AND_SHAPE_MANAGER"
-        val KEY = Key.create<ColorAndShapeManager>(NAME)
-    }
 
     @Synchronized
     fun consumedAtOffset(offset: Int): ConsumedData? {

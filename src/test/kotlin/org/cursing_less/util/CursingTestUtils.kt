@@ -14,11 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlinx.html.currentTimeMillis
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.service.CursingMarkStorageService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.toolwindow.CursingMarksToolWindow
 
 /**
@@ -80,15 +78,16 @@ object CursingTestUtils {
      * @param offset The offset in the editor
      * @return The CursingColorShape at the specified offset, or null if not found
      */
-    fun getCursingColorShape(editor: Editor, offset: Int): CursingColorShape? {
-        var data: CursingColorShape? = null
-        runInEdtAndWait {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+    suspend fun getCursingColorShape(editor: Editor, offset: Int): CursingColorShape? {
+        val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
 
-            data = editor.inlayModel.getInlineElementsInRange(offset, offset)
-                .firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
-        }
-        return data
+        completeProcessing()
+        return markupService.pullExistingGraphics(editor)
+            .values
+            .asSequence()
+            .filter { it.offset == offset }
+            .map { it.cursingColorShape }
+            .firstOrNull()
     }
 
     suspend fun completeProcessing() {
