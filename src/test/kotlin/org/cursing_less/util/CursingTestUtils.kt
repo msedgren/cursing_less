@@ -18,6 +18,7 @@ import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.service.CursingMarkStorageService
 import org.cursing_less.service.CursingMarkupService
 import org.cursing_less.toolwindow.CursingMarksToolWindow
+import java.util.SortedSet
 
 /**
  * Utility class containing common functions used across test classes.
@@ -106,6 +107,15 @@ object CursingTestUtils {
             markupService.resetProcessingCount()
         }
 
+    }
+
+    suspend fun pullConsumedIndexes(editor: Editor, character: Char): SortedSet<Int> {
+        val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        return markupService
+            .pullExistingGraphics(editor)
+            .filter { it.value.character == character }
+            .keys
+            .toSortedSet()
     }
 
 }

@@ -3,6 +3,7 @@ package org.cursing_less.service
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
+import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
@@ -12,6 +13,8 @@ import kotlinx.coroutines.withContext
 import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.util.CursingTestUtils
 import org.cursing_less.util.CursingTestUtils.completeProcessing
+import org.cursing_less.util.CursingTestUtils.tearDownTestFixture
+import org.cursing_less.util.CursingTestUtils.pullConsumedIndexes
 import org.cursing_less.util.OffsetDistanceComparator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,6 +27,20 @@ class CursingMarkupServiceTest {
     lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
 
+    val largeDoc = """
+        <foo>
+        <!-- A a a a a a a a a a a a a a a a a a a a a a a a a a a A a a a a a a a a a a a a a a a a a a a a a a a a a A  -->
+        <!-- b b b b b b b b b b b b b b -->
+        <!-- c c c c c c c c c c c c c c -->
+        <!-- d d d d d d d d d d d d d d -->
+        <!-- e e e e e e e e e e e e e e -->
+        <!-- A a a a a a a a a a a a a a a a a a a a a a a a a a A a a a a a a a a a a a a a a a a a a a a a a a a a a A  -->
+        <!-- b b b b b b b b b b b b b b  -->
+        <!-- c c c c c c c c c c c c c  -->
+        <!-- d d d d d d d d d d d d d d  -->
+        </foo>
+    """.trimIndent()
+
     @BeforeEach
     fun setUp() {
         val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
@@ -33,7 +50,7 @@ class CursingMarkupServiceTest {
 
     @AfterEach
     fun tearDown() {
-        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
+        tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
@@ -119,5 +136,36 @@ class CursingMarkupServiceTest {
         graphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
         // There should be tokens again
         assertTrue(graphics.isNotEmpty(), "Tokens should be added when cursing is re-enabled")
+    }
+
+    @Test
+    fun testItRendersTokensAsWeMove() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        withContext(Dispatchers.EDT) {
+            // given a large document that is visible
+            codeInsightFixture.configureByText(XmlFileType.INSTANCE, largeDoc)
+            EditorTestUtil.setEditorVisibleSize(codeInsightFixture.editor, 500, 500)
+            // and we are at offset 11 (just to match below...)
+            codeInsightFixture.editor.caretModel.moveToOffset(11)
+        }
+        completeProcessing()
+        // when we update for this position
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
+        // expect the first 30 'a' tokens were added.
+        var indexes = pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        assertEquals(generateSequence(11) { it + 2 }.take(30).toSortedSet(), indexes)
+        // and when we move to offset 424
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 424)
+        // expect the last 30 'a' tokens were added.
+        indexes = pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        assertEquals(generateSequence(325) { it + 2 }.take(30).toSortedSet(), indexes)
+        // and when we are in the middle
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 197)
+        // expect the last of the first 15 and first of the last 15 'a' tokens were added.
+        indexes = pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        assertEquals(
+            generateSequence(89) { it + 2 }.take(15).plus(generateSequence(277) { it + 2 }.take(15)).toSortedSet(),
+            indexes
+        )
     }
 }

@@ -8,7 +8,12 @@ import kotlin.math.abs
  */
 class OffsetDistanceComparator<T>(private val offset: Int, private val offsetExtractor: (T) -> Int) :
     Comparator<T> {
+
+    companion object {
+        fun distance(offsetOne: Int, offsetTwo: Int) = abs(offsetOne - offsetTwo)
+    }
+
     override fun compare(a: T, b: T): Int {
-        return abs(offset - offsetExtractor(a)) - abs(offset - offsetExtractor(b))
+        return distance(offset, offsetExtractor(a)) - distance(offset, offsetExtractor(b))
     }
 }
