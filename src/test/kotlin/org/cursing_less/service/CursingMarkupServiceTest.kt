@@ -10,6 +10,8 @@ import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.cursing_less.color_shape.CursingColor
+import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
 import org.cursing_less.util.CursingTestUtils
 import org.cursing_less.util.CursingTestUtils.completeProcessing
@@ -138,6 +140,26 @@ class CursingMarkupServiceTest {
         assertTrue(graphics.isNotEmpty(), "Tokens should be added when cursing is re-enabled")
     }
 
+    
+
+    @Test
+    fun testGraphicsByChar() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+
+        withContext(Dispatchers.EDT) {
+            codeInsightFixture.configureByText(XmlFileType.INSTANCE, largeDoc)
+            EditorTestUtil.setEditorVisibleSize(codeInsightFixture.editor, 500, 500)
+        }
+        completeProcessing()
+
+        // Test at beginning of document
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
+        val existingGraphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
+
+        var graphics = cursingMarkupService.graphicsByChar(existingGraphics,  11)
+        assertEquals(generateSequence(11) { it + 2 }.take(30).toList(), graphics['a']?.map { it.offset })
+    }
+
     @Test
     fun testItRendersTokensAsWeMove() = runBlocking {
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
@@ -152,20 +174,25 @@ class CursingMarkupServiceTest {
         // when we update for this position
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
         // expect the first 30 'a' tokens were added.
-        var indexes = pullConsumedIndexes(codeInsightFixture.editor, 'a')
-        assertEquals(generateSequence(11) { it + 2 }.take(30).toSortedSet(), indexes)
+        assertEquals(generateSequence(11) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a'))
+        // and when we move  halfway down the list  update for this position
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 64)
+        // expect the first 30 'a' tokens were added.
+        assertEquals(generateSequence(35) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a'))
+
         // and when we move to offset 424
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 424)
         // expect the last 30 'a' tokens were added.
-        indexes = pullConsumedIndexes(codeInsightFixture.editor, 'a')
-        assertEquals(generateSequence(325) { it + 2 }.take(30).toSortedSet(), indexes)
+        assertEquals(generateSequence(325) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a'))
         // and when we are in the middle
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 197)
         // expect the last of the first 15 and first of the last 15 'a' tokens were added.
-        indexes = pullConsumedIndexes(codeInsightFixture.editor, 'a')
         assertEquals(
             generateSequence(89) { it + 2 }.take(15).plus(generateSequence(277) { it + 2 }.take(15)).toSortedSet(),
-            indexes
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
         )
     }
 }

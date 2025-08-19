@@ -174,9 +174,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         editor: Editor
     ): CursingTokenChanges {
         val cursingTokenChanges = CursingTokenChanges()
-        val existingGraphicsByChar by lazy {
-            graphicsByChar(existingGraphics, cursorOffset)
-        }
+        val existingGraphicsByChar = graphicsByChar(existingGraphics, cursorOffset)
 
         tokens.forEach { (tokenOffset, token) ->
             var consumed = colorAndShapeManager.consume(tokenOffset, token)
@@ -285,7 +283,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                 .add(it.value)
 
         }
-        byChar.values.forEach { lst -> lst.sortedWith(OffsetDistanceComparator(offset) { it.offset }) }
+        byChar.forEach { entry -> entry.value.sortWith(OffsetDistanceComparator(offset) { it.offset }) }
         return byChar
     }
 
