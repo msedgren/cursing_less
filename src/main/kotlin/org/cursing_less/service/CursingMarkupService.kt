@@ -162,6 +162,8 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
 
                 editor.contentComponent.repaint()
             }
+
+            validateNoDuplicateGraphics(editor)
         }
         return cursingTokenChanges
     }
@@ -287,6 +289,22 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         return byChar
     }
 
+    suspend fun validateNoDuplicateGraphics(editor: Editor) {
+        val existing = mutableMapOf<Int, CursingGraphics>()
+        return withContext(Dispatchers.EDT) {
+            editor.markupModel.allHighlighters
+                .asSequence()
+                .filter { it.isValid }
+                .mapNotNull { it.getUserData(CURSING_EDITOR_GRAPHICS) }
+                .forEach {
+                    val existingMapping = existing.putIfAbsent(it.offset, it)
+                    if(existingMapping != null) {
+                        thisLogger().error("Duplicate graphics found at offset ${it.offset}: existing: $existingMapping, new: $it")
+                    }
+                }
+        }
+    }
+
     suspend fun pullExistingGraphics(editor: Editor): Map<Int, CursingGraphics> {
         return withContext(Dispatchers.EDT) {
             editor.markupModel.allHighlighters
@@ -362,21 +380,15 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                 debouncedFlow
                     .cancellable()
                     .collect {
-                        var task: DebounceTask? = null
-                        var currentId = -1L
-                        it.forEach { (currentTask, state, function) ->
-                            try {
-                                if (state.id != currentId || task != currentTask) {
-                                    task = currentTask
-                                    currentId = state.id
-                                    function()
-                                }
-                            } catch (e: Exception) {
-                                thisLogger().warn("Failed to process cursing markup", e)
-                            } finally {
-                                processingCount.decrementAndGet()
+                        var current: Triple<DebounceTask, CursingEditorState, suspend () -> Any>? = null
+                        it.forEach { triple ->
+                            if(current != null && (current.first != triple.first || current.second.id != triple.second.id)) {
+                                invokeNow(current)
                             }
+                            current = triple
                         }
+                        invokeNow(current!!)
+                        processingCount.getAndAdd(-it.size)
                     }
             }.invokeOnCompletion {
                 resetProcessingCount()
@@ -390,6 +402,14 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         ) {
             processingCount.incrementAndGet()
             flow.emit(Triple(task, cursingEditorState, function))
+        }
+
+        suspend fun invokeNow(triple: Triple<DebounceTask, CursingEditorState, suspend () -> Any>) {
+            try {
+                triple.third()
+            } catch (e: Exception) {
+                thisLogger().warn("Failed to process cursing markup", e)
+            }
         }
 
         fun workToProcess(): Boolean {
