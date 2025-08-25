@@ -14,6 +14,6 @@ class OffsetDistanceComparator<T>(private val offset: Int, private val offsetExt
     }
 
     override fun compare(a: T, b: T): Int {
-        return distance(offset, offsetExtractor(a)) - distance(offset, offsetExtractor(b))
+        return compareValues(distance(offset, offsetExtractor(a)), distance(offset, offsetExtractor(b)))
     }
 }

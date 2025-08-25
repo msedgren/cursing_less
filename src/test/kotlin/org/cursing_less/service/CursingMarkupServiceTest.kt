@@ -3,6 +3,8 @@ package org.cursing_less.service
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.readAndWriteAction
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
@@ -140,7 +142,6 @@ class CursingMarkupServiceTest {
         assertTrue(graphics.isNotEmpty(), "Tokens should be added when cursing is re-enabled")
     }
 
-    
 
     @Test
     fun testGraphicsByChar() = runBlocking {
@@ -156,7 +157,7 @@ class CursingMarkupServiceTest {
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
         val existingGraphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
 
-        var graphics = cursingMarkupService.graphicsByChar(existingGraphics,  11)
+        var graphics = cursingMarkupService.graphicsByChar(existingGraphics, 11)
         assertEquals(generateSequence(11) { it + 2 }.take(30).toList(), graphics['a']?.map { it.offset })
     }
 
@@ -174,19 +175,25 @@ class CursingMarkupServiceTest {
         // when we update for this position
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
         // expect the first 30 'a' tokens were added.
-        assertEquals(generateSequence(11) { it + 2 }.take(30).toSortedSet(),
-            pullConsumedIndexes(codeInsightFixture.editor, 'a'))
+        assertEquals(
+            generateSequence(11) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
         // and when we move  halfway down the list  update for this position
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 64)
         // expect the first 30 'a' tokens were added.
-        assertEquals(generateSequence(35) { it + 2 }.take(30).toSortedSet(),
-            pullConsumedIndexes(codeInsightFixture.editor, 'a'))
+        assertEquals(
+            generateSequence(35) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
 
         // and when we move to offset 424
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 424)
         // expect the last 30 'a' tokens were added.
-        assertEquals(generateSequence(325) { it + 2 }.take(30).toSortedSet(),
-            pullConsumedIndexes(codeInsightFixture.editor, 'a'))
+        assertEquals(
+            generateSequence(325) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
         // and when we are in the middle
         cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 197)
         // expect the last of the first 15 and first of the last 15 'a' tokens were added.
@@ -194,5 +201,37 @@ class CursingMarkupServiceTest {
             generateSequence(89) { it + 2 }.take(15).plus(generateSequence(277) { it + 2 }.take(15)).toSortedSet(),
             pullConsumedIndexes(codeInsightFixture.editor, 'a')
         )
+    }
+
+    @Test
+    fun testDeletingNoOverlap() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+
+        // Verify tokens are added
+        completeProcessing()
+        // and no overlap
+        withContext(Dispatchers.EDT) {
+            cursingMarkupService.validateNoDuplicateGraphics(codeInsightFixture.editor)
+        }
+        //when we delete the first character
+
+        readAndWriteAction {
+            writeAction {
+                WriteCommandAction.writeCommandAction(codeInsightFixture.project)
+                    .withName("Delete Character")
+                    .compute<Unit, Throwable> {
+                        codeInsightFixture.editor.document.deleteString(0, 1)
+                    }
+            }
+        }
+
+        // Verify tokens are added
+        completeProcessing()
+        // and no overlap
+        withContext(Dispatchers.EDT) {
+            cursingMarkupService.validateNoDuplicateGraphics(codeInsightFixture.editor)
+        }
     }
 }

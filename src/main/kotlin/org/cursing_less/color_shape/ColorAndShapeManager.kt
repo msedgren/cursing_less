@@ -15,6 +15,7 @@ class ColorAndShapeManager(
             .toSet()
 
     private var consumed: MutableMap<Int, ConsumedData> = HashMap()
+    private var offsetPreference: MutableMap<Int, CursingColorShape> = HashMap()
 
     private var characterState: MutableMap<Char, FreeCursingColorShape> = HashMap()
 
@@ -38,14 +39,18 @@ class ColorAndShapeManager(
         val existing =
             characterState.computeIfAbsent(lowerCaseCharacter) { FreeCursingColorShape(generatePermutations()) }
         // get the preference (what it was previously set to) at that offset.
+        val preference = offsetPreference[offset]
+
+        // get the preference (what it was previously set to) at that offset.
         // attempt to consume
-        val consumedThing = existing.consume(requiredColorShape)
+        val consumedThing = existing.consume(requiredColorShape, preference)
         if (consumedThing != null) {
             val (textToConsume, updatedMap) = correctConsumedForConsumed(offset, text)
             consumed = updatedMap
 
             consumed[offset] =
                 ConsumedData(consumedThing, offset, textToConsume, text)
+            offsetPreference[offset] = consumedThing
 
         }
         return consumedThing
@@ -72,6 +77,11 @@ class ColorAndShapeManager(
         }.toMutableMap()
 
         return Pair(textToConsume, map)
+    }
+
+    @Synchronized
+    fun setPreference(offset: Int, colorShape: CursingColorShape) {
+        offsetPreference[offset] = colorShape
     }
 
     @Synchronized
@@ -186,9 +196,11 @@ class ColorAndShapeManager(
             free.shuffle()
         }
 
-        fun consume(requiredColorShape: CursingColorShape?): CursingColorShape? {
+        fun consume(requiredColorShape: CursingColorShape?, preference: CursingColorShape?): CursingColorShape? {
             return if (requiredColorShape != null && free.remove(requiredColorShape)) {
                 requiredColorShape
+            } else if (requiredColorShape == null && preference != null && free.remove(preference)) {
+                preference
             } else if (requiredColorShape == null && free.isNotEmpty()) {
                 free.removeFirst()
             } else {

@@ -86,6 +86,7 @@ object CursingTestUtils {
         return markupService.pullExistingGraphics(editor)
             .values
             .asSequence()
+            .flatMap { it }
             .filter { it.offset == offset }
             .map { it.cursingColorShape }
             .firstOrNull()
@@ -98,8 +99,9 @@ object CursingTestUtils {
         withContext(Dispatchers.EDT) {
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
         }
-        while((CursingMarksToolWindow.workToProcess() || markupService.workToProcess()) &&
-            (System.currentTimeMillis() - startTime) < waitAmount) {
+        while ((CursingMarksToolWindow.workToProcess() || markupService.workToProcess()) &&
+            (System.currentTimeMillis() - startTime) < waitAmount
+        ) {
             delay(10L)
         }
 
@@ -109,11 +111,11 @@ object CursingTestUtils {
 
     }
 
-    suspend fun pullConsumedIndexes(editor: Editor, character: Char): SortedSet<Int> {
+    fun pullConsumedIndexes(editor: Editor, character: Char): SortedSet<Int> {
         val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         return markupService
             .pullExistingGraphics(editor)
-            .filter { it.value.character == character }
+            .filter { character.lowercaseChar() == editor.document.charsSequence[it.key].lowercaseChar() }
             .keys
             .toSortedSet()
     }
