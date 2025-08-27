@@ -25,6 +25,12 @@ class ColorAndShapeManager(
     }
 
     @Synchronized
+    fun isFree(cursingColorShape: CursingColorShape, character: Char): Boolean {
+        val free = characterState[character.lowercaseChar()]
+        return free != null && free.available(cursingColorShape)
+    }
+
+    @Synchronized
     fun consume(offset: Int, text: String, requiredColorShape: CursingColorShape? = null): CursingColorShape? {
         require(text.isNotEmpty()) { "text must not be empty!" }
 
@@ -211,5 +217,11 @@ class ColorAndShapeManager(
         fun returnFreed(freed: CursingColorShape) {
             free.add(freed)
         }
+
+        fun available(cursingColorShape: CursingColorShape): Boolean {
+            return free.contains(cursingColorShape)
+        }
+
+
     }
 }

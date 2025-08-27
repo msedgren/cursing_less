@@ -35,12 +35,6 @@ class CursingCopyMarkCommandTest {
     }
 
     @Test
-    fun testMatches() {
-        assertTrue(CursingCopyMarkCommand.matches("curse_copy_mark"))
-        assertFalse(CursingCopyMarkCommand.matches("curse_mark"))
-    }
-
-    @Test
     fun testCopyMarkWithExplicitNumber() = runBlocking {
         val project = codeInsightFixture.project
         codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")

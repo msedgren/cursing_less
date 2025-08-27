@@ -24,26 +24,20 @@ data object CursingCopyMarkCommand : VoiceCommand {
     override fun matches(command: String) = command == "curse_copy_mark"
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
-        // Determine mark number, defaulting to 1 if not provided
-        val markNumber = pullMark(commandParameters) ?: return CursingCommandService.BadResponse
-
-        // Retrieve marked text
-        val markedText = markStorageService.getMarkedText(markNumber)
-        if (markedText.isNullOrEmpty()) {
+        val givenMark = pullMark(commandParameters)
+        val markNumber = givenMark ?: 1
+        val markedTextInfo = markStorageService.getMarkedTextInfo(markNumber)
+        if (markedTextInfo == null) {
             return CursingCommandService.BadResponse
-        }
-
-        // Copy to clipboard on EDT
-        return withContext(Dispatchers.EDT) {
-            CopyPasteManager.getInstance().setContents(StringSelection(markedText))
-            CursingCommandService.OkayResponse
+        } else {
+            withContext(Dispatchers.EDT) {
+                CopyPasteManager.getInstance().setContents(StringSelection(markedTextInfo.text))
+            }
+            return CursingCommandService.OkayResponse
         }
     }
 
     private fun pullMark(commandParameters: List<String>): Int? {
-        if (commandParameters.isEmpty()) return 1
-        val markNumber = commandParameters[0].toIntOrNull() ?: return null
-        if (markNumber < 1) return null
-        return markNumber
+        return commandParameters.firstOrNull()?.toIntOrNull()
     }
 }

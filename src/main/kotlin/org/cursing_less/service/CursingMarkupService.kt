@@ -14,7 +14,6 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.getOrCreateUserDataUnsafe
 import com.intellij.openapi.util.removeUserData
 import com.intellij.platform.util.coroutines.flow.debounceBatch
-import com.intellij.util.containers.tail
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -115,9 +114,19 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         })
     }
 
-    suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int): CursingTokenChanges {
-        val cursingTokenChanges = CursingTokenChanges()
-        if (enabled.get() && !editor.isDisposed && editorEligibleForMarkup(editor)) {
+    suspend fun updateCursingTokensNow(editor: Editor, cursorOffset: Int) {
+        try {
+            performUpdateOfCursingTokens(editor, cursorOffset)
+        } catch (e: IllegalStateException) {
+            thisLogger().warn("Failed to update cursing tokens due to an illegal state", e)
+            // If it fails then start fresh and try again.
+            removeAllCursingTokens(editor)
+            performUpdateOfCursingTokens(editor, cursorOffset)
+        }
+    }
+
+    private suspend fun performUpdateOfCursingTokens(editor: Editor, cursorOffset: Int) {
+        if (enabled.get() && !editor.isDisposed) {
             val editorState = getOrCreateAndSetEditorState(editor)
             val colorAndShapeManager = editorState.colorAndShapeManager
             colorAndShapeManager.freeAll()
@@ -125,14 +134,13 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             val tokensByOffset =
                 tokenService.findCursingTokens(editor).associateTo(mutableMapOf(), { it.first to it.second })
 
-            val existingGraphics = pullExistingGraphics(editor).toMutableMap()
+            val existingGraphics = pullExistingGraphics(editor)
 
             withContext(Dispatchers.EDT + NonCancellable) {
                 accountForAndCleanExistingGraphics(
                     existingGraphics,
                     tokensByOffset,
-                    colorAndShapeManager,
-                    cursingTokenChanges
+                    colorAndShapeManager
                 )
 
                 val sortedTokens = tokensByOffset
@@ -141,50 +149,59 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     .sortedBy { distance(cursorOffset, it.first) }
                     .toList()
 
-                cursingTokenChanges.add(
-                    addUnknownGraphics(existingGraphics, sortedTokens, colorAndShapeManager, cursorOffset, editor)
-                )
+                addUnknownGraphics(existingGraphics, sortedTokens, colorAndShapeManager, cursorOffset, editor)
 
                 editor.contentComponent.repaint()
             }
 
             validateNoDuplicateGraphics(editor)
         }
-        return cursingTokenChanges
     }
 
     private fun accountForAndCleanExistingGraphics(
         existingGraphics: MutableMap<Int, MutableList<CursingGraphics>>,
         tokensByOffset: MutableMap<Int, String>,
-        colorAndShapeManager: ColorAndShapeManager,
-        cursingTokenChanges: CursingTokenChanges,
+        colorAndShapeManager: ColorAndShapeManager
     ) {
         val iterator = existingGraphics.iterator()
+        // go through all existing graphics
         while (iterator.hasNext()) {
             val (offset, graphics) = iterator.next()
-            val graphic = graphics[0]
-            while (graphics.size > 1) {
-                thisLogger().warn("Multiple graphics found at offset $offset: $graphics")
-                graphics.removeLast().highlighter.dispose()
-                colorAndShapeManager.setPreference(graphic.offset, graphic.cursingColorShape)
-            }
-
             val existingToken = tokensByOffset[offset]
-
+            // if there is no token at the offset, remove the graphics
             if (existingToken != null) {
-                if(graphic.text != existingToken) {
-                    graphic.text = existingToken
+                val character = existingToken[0].lowercaseChar()
+                val graphicsIterator = graphics.iterator()
+                // otherwise, make sure the graphic is not already consumed
+                while (graphicsIterator.hasNext()) {
+                    val next = graphicsIterator.next()
+                    if (!colorAndShapeManager.isFree(next.cursingColorShape, character)) {
+                        graphicsIterator.remove()
+                        next.highlighter.dispose()
+                    }
                 }
-                cursingTokenChanges.incrementResued()
-                tokensByOffset.remove(offset)
-                checkNotNull(
-                    colorAndShapeManager.consume(graphic.offset, graphic.text, graphic.cursingColorShape)
-                ) {
-                    "Color and shape mismatch. Failed to consume color and shape that should be available."
+                // if there are graphics that are valid at that offset then use them.
+                if (graphics.isNotEmpty()) {
+                    val graphic = graphics[0]
+                    // but make sure there is only one
+                    while (graphics.size > 1) {
+                        thisLogger().warn("Multiple graphics found at offset $offset: $graphics")
+                        graphics.removeLast().highlighter.dispose()
+                        colorAndShapeManager.setPreference(graphic.offset, graphic.cursingColorShape)
+                    }
+                    // and update it to be correct.
+                    if (graphic.text != existingToken) {
+                        graphic.text = existingToken
+                    }
+                    tokensByOffset.remove(offset)
+                    checkNotNull(
+                        colorAndShapeManager.consume(graphic.offset, graphic.text, graphic.cursingColorShape)
+                    ) {
+                        "Color and shape mismatch. Failed to consume color and shape that should be available."
+                    }
                 }
             } else {
-                cursingTokenChanges.incrementDisposed()
-                graphic.highlighter.dispose()
+                graphics.forEach { it.highlighter.dispose() }
                 iterator.remove()
             }
         }
@@ -196,8 +213,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
         colorAndShapeManager: ColorAndShapeManager,
         cursorOffset: Int,
         editor: Editor
-    ): CursingTokenChanges {
-        val cursingTokenChanges = CursingTokenChanges()
+    ) {
         val existingGraphicsByChar = graphicsByChar(existingGraphics, cursorOffset)
         tokens
             .forEach { (tokenOffset, token) ->
@@ -210,8 +226,6 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                     if (candidateToSteal != null && candidateOffset != null &&
                         distance(cursorOffset, candidateOffset) > distance(cursorOffset, tokenOffset)
                     ) {
-                        cursingTokenChanges.incrementStolen()
-                        cursingTokenChanges.decrementResued()
                         colorAndShapeManager.free(candidateOffset)
                         candidateToSteal.highlighter.dispose()
                         consumed = checkNotNull(
@@ -224,53 +238,16 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
                             "Color and shape mismatch. Failed to consume color and shape that were stolen."
                         }
                     }
-                } else {
-                    cursingTokenChanges.incrementConsumed()
                 }
+
                 if (consumed != null) {
                     addColoredShapeAboveCursingToken(editor, consumed, tokenOffset, token)
-                } else {
-                    cursingTokenChanges.incrementFailed()
                 }
             }
-
-        return cursingTokenChanges
-    }
-
-    data class CursingTokenChanges(
-        var resuedCount: Int = 0,
-        var consumedCount: Int = 0,
-        var stolenCount: Int = 0,
-        var failedCount: Int = 0,
-        var disposedCount: Int = 0
-    ) {
-
-        fun incrementResued() = resuedCount++
-        fun decrementResued() = resuedCount--
-        fun incrementConsumed() = consumedCount++
-        fun incrementStolen() = stolenCount++
-        fun incrementFailed() = failedCount++
-        fun incrementDisposed() = disposedCount++
-
-        fun add(changes: CursingTokenChanges) {
-            resuedCount += changes.resuedCount
-            consumedCount += changes.consumedCount
-            stolenCount += changes.stolenCount
-            failedCount += changes.failedCount
-            disposedCount += changes.disposedCount
-        }
     }
 
     fun workToProcess() = debouncer.workToProcess()
     fun resetProcessingCount() = debouncer.resetProcessingCount()
-
-    private fun editorEligibleForMarkup(editor: Editor): Boolean {
-        val lineHeight = editor.lineHeight
-        val fontMetrics = editor.contentComponent.getFontMetrics(editor.colorsScheme.getFont(null))
-        val fontHeight = fontMetrics.height
-
-        return (lineHeight - fontHeight) >= 2
-    }
 
     private suspend fun removeAllCursingTokens(editor: Editor) {
         debouncer.debounce(DebounceTask.REMOVE, getOrCreateAndSetEditorState(editor), suspend {

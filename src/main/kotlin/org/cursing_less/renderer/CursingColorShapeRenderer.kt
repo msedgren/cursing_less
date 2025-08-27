@@ -9,6 +9,7 @@ import com.intellij.openapi.editor.markup.RangeHighlighter
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.color_shape.CursingShape
 import org.cursing_less.service.CursingPreferenceService
+import org.cursing_less.service.CursingRendererService
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.geom.GeneralPath
@@ -22,14 +23,8 @@ class ColoredShapeRenderer(
     private val character: Char,
 ) : CustomHighlighterRenderer {
 
-    private val preferenceService: CursingPreferenceService by lazy {
-        ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
-    }
-
-    fun calculateSpace(editor: Editor, character: Char): Pair<Int, Int> {
-        val textMetrics =
-            editor.contentComponent.getFontMetrics(editor.colorsScheme.getFont(EditorFontType.PLAIN))
-        return Pair(textMetrics.charWidth(character), textMetrics.height)
+    private val cursingRendererService: CursingRendererService by lazy {
+        ApplicationManager.getApplication().getService(CursingRendererService::class.java)
     }
 
     override fun paint(editor: Editor, highlighter: RangeHighlighter, g: Graphics) {
@@ -47,10 +42,7 @@ class ColoredShapeRenderer(
             CursingShape.Heart -> PaintableHeart
         }
 
-        val lineHeight = editor.lineHeight
-        val (characterWidth, characterHeight) = calculateSpace(editor, character)
-        val widthToUse = (characterWidth * preferenceService.scale).toInt().let { if (it % 2 == 0) it else it - 1 }
-        val heightToUse = (lineHeight - characterHeight).let { if (it % 2 == 0) it else it - 1 }
+        val (widthToUse, heightToUse) = cursingRendererService.calculatesSpaceToUse(editor, character)
         val squareSizeToUse = minOf(widthToUse, heightToUse)
         val offset = highlighter.startOffset
         val visualPosition = editor.offsetToVisualPosition(offset)
