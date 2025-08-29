@@ -1,6 +1,7 @@
 [versions]
 # libraries
-
+jupiter = "5.13.4"
+junit = "4.13.2"
 
 # plugins
 changelog = "2.4.0"
@@ -10,6 +11,15 @@ kover = "0.9.1"
 qodana = "2025.1.1"
 
 [libraries]
+jupiter-api = {module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter"}
+jupiter-params = {module = "org.junit.jupiter:junit-jupiter-params", version.ref = "jupiter"}
+jupiter-engine = {module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "jupiter"}
+jupiter-launcher = { module= "org.junit.platform:junit-platform-launcher"}
+junit_legacy = {module = "junit:junit", version.ref = "junit"}
+
+[bundles]
+unitTests = ["jupiter-api", "jupiter-params", ]
+unitTests-runtime = ["jupiter-engine", "jupiter-launcher", "junit_legacy"]
 
 [plugins]
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
