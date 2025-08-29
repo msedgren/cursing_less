@@ -13,6 +13,7 @@
 ### Changed
 - Redesigned to use a CustomHighlighter in place of inlays.
 - Use flows to debounce and decrease the time by half (250 ms -> 125 ms)
+- Don't ignore "." in default regex or PSI.
 
 ### Fixed
 - Fixes around inlays at a location with a token.
