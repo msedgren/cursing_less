@@ -10,7 +10,8 @@ of navigation and manipulation using decorators within the editor. Basic support
 plugin [Voice Code Idea](https://github.com/anonfunc/intellij-voicecode).
 
 This plugin requires [cursing_less_talon](https://github.com/msedgren/cursing_less_talon) and [Talonhub/community](https://github.com/talonhub/community).  
-Cursing_less_talon provides details about the usage and available commands.
+Cursing_less_talon provides details about the usage and available commands. Alternatively, you can disable the decorators within 
+the plugin settings and only use the functionality provided by Talonhub/Community.
 
 <!-- Plugin description end -->
 ## Installation
