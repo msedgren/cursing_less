@@ -2,15 +2,15 @@ package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.util.CursingTestUtils.completeProcessing
+import org.cursing_less.util.CursingTestUtils.getCursingColorShape
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -23,12 +23,14 @@ class CursingAddCursorCommandTest {
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        CursingTestUtils.tearDownTestFixture(codeInsightFixture)
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
@@ -48,12 +50,13 @@ class CursingAddCursorCommandTest {
         val editor = codeInsightFixture.editor
         // and markup is present
         val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
-        cursingMarkupService.updateCursingTokensNow(editor, 0)
+        cursingMarkupService.updateCursingTokens(editor, 0)
+        completeProcessing()
 
         // and we can get the shape and color at offset 4 (test)
         val offset = 4
         val character = 't'
-        val colorAndShape = CursingTestUtils.getCursingColorShape(editor, offset)
+        val colorAndShape = getCursingColorShape(editor, offset)
         assertNotNull(colorAndShape)
 
         // When we run the add cursor command with the numbers and character

@@ -1,7 +1,6 @@
 package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
@@ -20,12 +19,14 @@ class CursingSwapSelectionsCommandTest {
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        CursingTestUtils.tearDownTestFixture(codeInsightFixture)
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test

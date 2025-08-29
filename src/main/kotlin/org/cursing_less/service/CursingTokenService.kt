@@ -5,7 +5,6 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.ProperTextRange
@@ -19,10 +18,6 @@ import com.intellij.util.io.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
-import org.cursing_less.color_shape.ColorAndShapeManager
-import org.cursing_less.color_shape.CursingColorShape
-import org.cursing_less.util.OffsetDistanceComparator
-import kotlin.collections.putAll
 
 /**
  * Service responsible for finding and processing tokens in text and a PsiTree.
@@ -44,41 +39,36 @@ class CursingTokenService() {
      * Finds cursing tokens in the given editor's visible area.
      *
      * @param editor The editor to find tokens in
-     * @param offset The current cursor offset
-     * @param manager The manager for assigning colors and shapes
      * @return A map of offset to a pair containing the token character and the cursing color shape
      */
     suspend fun findCursingTokens(
-        editor: Editor,
-        offset: Int,
-        manager: ColorAndShapeManager,
-        existingInlays: Map<Int, List<Pair<Inlay<*>, CursingColorShape>>>
-    ): Map<Int, Pair<Char, CursingColorShape>> {
+        editor: Editor
+    ): Sequence<Pair<Int, String>> {
         val visibleArea = withContext(Dispatchers.EDT) { editor.calculateVisibleRange() }
         return withContext(Dispatchers.Default) {
             val currentJob = coroutineContext[Job]
 
-            ReadAction.nonBlocking<Map<Int, Pair<Char, CursingColorShape>>> {
-                val found = mutableMapOf<Int, Pair<Char, CursingColorShape>>()
+            ReadAction.nonBlocking<Sequence<Pair<Int, String>>> {
+                var found: Sequence<Pair<Int, String>> = emptySequence()
 
                 // Only use regex if enabled in preferences
                 if (preferenceService.useRegex) {
-                    found.putAll(consumeVisible(manager, offset,
-                        found.keys, editor.document.getText(visibleArea), visibleArea, existingInlays))
+                    found = findVisible(editor.document.getText(visibleArea), visibleArea)
                 }
 
                 ProgressManager.checkCanceled()
 
                 // Only use PSI tree if enabled in preferences
                 if (preferenceService.usePsiTree) {
-                    found.putAll(consumeVisiblePsi(manager, offset, editor, visibleArea, existingInlays))
+                    found = found.plus(
+                        findVisiblePsi(editor, visibleArea)
+                    )
                 }
-                found
+                found.filter { it.second.isNotEmpty() }
             }
                 .expireWhen { currentJob?.isCancelled == true } // Cancel when the coroutine is cancelled
                 .submit(AppExecutorUtil.getAppExecutorService())
                 .await() // Wait for the result
-
         }
     }
 
@@ -119,37 +109,26 @@ class CursingTokenService() {
     /**
      * Processes visible PSI elements in the editor and consumes tokens for markup.
      *
-     * @param manager The color and shape manager responsible for token consumption and style assignment
-     * @param offset The current cursor offset in the editor
      * @param editor The editor instance containing the text to process
      * @param visibleArea The visible text range in the editor
-     * @return A sequence of pairs containing the offset and corresponding character-style pairs for markup
+     * @return A sequence of pairs containing the offset and token
      */
-    fun consumeVisiblePsi(
-        manager: ColorAndShapeManager,
-        offset: Int,
+    fun findVisiblePsi(
         editor: Editor,
         visibleArea: ProperTextRange,
-        existingInlays: Map<Int, List<Pair<Inlay<*>, CursingColorShape>>>
-    ): Sequence<Pair<Int, Pair<Char, CursingColorShape>>> {
+    ): Sequence<Pair<Int, String>> {
         val project = editor.project ?: ProjectManager.getInstance().defaultProject
         val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
         if (file != null) {
             val elements = findVisibleElements(visibleArea, file)
             ProgressManager.checkCanceled()
-            val offsetComparator =
-                OffsetDistanceComparator<Pair<PsiElement, String>>(offset) { it.first.startOffset }
             return elements
                 .asSequence()
                 .filter { visibleArea.contains(it.startOffset) }
                 .map { Pair(it, it.text) }
-                .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
-                .sortedWith(offsetComparator)
-                .mapNotNull { (element, text) ->
-                    val preference = existingInlays[element.startOffset]?.firstOrNull()?.second
-                    manager.consume(element.startOffset, text, preference)?.let {
-                        Pair(element.startOffset, Pair(text[0], it))
-                    }
+                .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() }
+                .map { (element, text) ->
+                    Pair(element.startOffset, text)
                 }
         } else {
             return emptySequence()
@@ -157,33 +136,18 @@ class CursingTokenService() {
     }
 
     /**
-     * Consumes tokens in the visible area of the given text, filtering out already known tokens.
+     * find tokens in the visible area of the given text, filtering out already known tokens.
      *
-     * @param colorAndShapeManager The manager for assigning colors and shapes
-     * @param currentOffset The current cursor offset
-     * @param alreadyKnown Set of offsets that are already known/processed
      * @param text The visible text
      * @param visibleArea The range of visible text
-     * @return Sequence of pairs containing offset and consumed token information
+     * @return Sequence of pairs containing offset and token
      */
-    fun consumeVisible(
-        colorAndShapeManager: ColorAndShapeManager,
-        currentOffset: Int,
-        alreadyKnown: Set<Int>,
+    fun findVisible(
         text: String,
-        visibleArea: ProperTextRange,
-        existingInlays: Map<Int, List<Pair<Inlay<*>, CursingColorShape>>>
-    ): Sequence<Pair<Int, Pair<Char, CursingColorShape>>> {
+        visibleArea: ProperTextRange
+    ): Sequence<Pair<Int, String>> {
         val tokens = findAllCursingTokensWithin(text, visibleArea.startOffset)
-        val offsetComparator = OffsetDistanceComparator<CursingToken>(currentOffset) { it.startOffset }
         return tokens
-            .filterNot { alreadyKnown.contains(it.startOffset) }
-            .sortedWith(offsetComparator)
-            .mapNotNull {
-                val preference = existingInlays[it.startOffset]?.firstOrNull()?.second
-                colorAndShapeManager.consume(it.startOffset, it.text, preference)?.let { consumed ->
-                    Pair(it.startOffset, Pair(it.text[0], consumed))
-                }
-            }
+            .map { Pair(it.startOffset, it.text) }
     }
 }

@@ -2,32 +2,36 @@ package org.cursing_less.service
 
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
+import com.intellij.ui.JBColor
+import com.intellij.util.application
 import org.cursing_less.color_shape.ColorAndShapeManager
 import org.cursing_less.color_shape.CursingColor
 import org.cursing_less.color_shape.CursingShape
-import org.junit.jupiter.api.Assertions.*
+import org.cursing_less.util.CursingTestUtils
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
-import com.intellij.ui.JBColor
-import com.intellij.util.application
-import org.cursing_less.util.CursingTestUtils
-import org.junit.jupiter.api.AfterEach
 
 class CursingTokenServiceTest {
 
-    private lateinit var codeInsightFixture: CodeInsightTestFixture
+    lateinit var projectTestFixture: IdeaProjectTestFixture
+    lateinit var codeInsightFixture: CodeInsightTestFixture
     private lateinit var tokenService: CursingTokenService
     private lateinit var colorAndShapeManager: ColorAndShapeManager
 
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
 
         tokenService = application.service<CursingTokenService>()
 
@@ -46,9 +50,7 @@ class CursingTokenServiceTest {
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
@@ -97,7 +99,7 @@ class CursingTokenServiceTest {
                 Arguments.of("/*comment*/", listOf("/*", "comment", "*/")),
                 Arguments.of("# hello", listOf("#", "hello")),
                 Arguments.of("// foo", listOf("//", "foo")),
-                Arguments.of("hey you, over there.", listOf("hey", "you", ",", "over", "there")),
+                Arguments.of("hey you, over there.", listOf("hey", "you", ",", "over", "there", ".")),
                 Arguments.of("foo(a!!, b)", listOf("foo", "(", "a", "!!", ",", "b", ")")),
             )
         }

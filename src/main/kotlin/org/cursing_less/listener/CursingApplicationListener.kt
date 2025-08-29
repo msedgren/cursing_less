@@ -1,18 +1,15 @@
 package org.cursing_less.listener
 
 import com.intellij.ide.AppLifecycleListener
-import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
-import com.intellij.openapi.editor.actionSystem.EditorActionManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.command.VoiceCommand
-import org.cursing_less.handler.CursingEditorActionHandler
 import org.cursing_less.service.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -92,25 +89,6 @@ class CursingApplicationListener : AppLifecycleListener {
             eventMulticaster.addDocumentListener(
                 CursingDocumentChangedListener(cursingScopeService.coroutineScope),
                 CursingPluginLifetimeDisposable.getInstance()
-            )
-            eventMulticaster.addEditorMouseListener(
-                CursingMouseListener(),
-                CursingPluginLifetimeDisposable.getInstance()
-            )
-
-            val actionManager = EditorActionManager.getInstance()
-            // Left arrow
-            val leftHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT)
-            actionManager.setActionHandler(
-                IdeActions.ACTION_EDITOR_MOVE_CARET_LEFT,
-                CursingEditorActionHandler(leftHandler, CursingUserDirection.LEFT)
-            )
-
-            // Right arrow
-            val rightHandler = actionManager.getActionHandler(IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT)
-            actionManager.setActionHandler(
-                IdeActions.ACTION_EDITOR_MOVE_CARET_RIGHT,
-                CursingEditorActionHandler(rightHandler, CursingUserDirection.RIGHT)
             )
         }
 

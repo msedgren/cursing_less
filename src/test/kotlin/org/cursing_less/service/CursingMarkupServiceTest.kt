@@ -1,15 +1,24 @@
 package org.cursing_less.service
 
 import com.intellij.ide.highlighter.XmlFileType
-import com.intellij.openapi.components.service
-import com.intellij.openapi.editor.Inlay
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.readAndWriteAction
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
-import com.intellij.testFramework.runInEdtAndWait
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.cursing_less.color_shape.CursingColor
+import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.listener.CursingApplicationListener
-import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.util.CursingTestUtils.completeProcessing
+import org.cursing_less.util.CursingTestUtils.tearDownTestFixture
+import org.cursing_less.util.CursingTestUtils.pullConsumedIndexes
 import org.cursing_less.util.OffsetDistanceComparator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,43 +28,50 @@ import org.junit.jupiter.api.Test
 
 class CursingMarkupServiceTest {
 
+    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
+
+    val largeDoc = """
+        <foo>
+        <!-- A a a a a a a a a a a a a a a a a a a a a a a a a a a A a a a a a a a a a a a a a a a a a a a a a a a a a A  -->
+        <!-- b b b b b b b b b b b b b b -->
+        <!-- c c c c c c c c c c c c c c -->
+        <!-- d d d d d d d d d d d d d d -->
+        <!-- e e e e e e e e e e e e e e -->
+        <!-- A a a a a a a a a a a a a a a a a a a a a a a a a a A a a a a a a a a a a a a a a a a a a a a a a a a a a A  -->
+        <!-- b b b b b b b b b b b b b b  -->
+        <!-- c c c c c c c c c c c c c  -->
+        <!-- d d d d d d d d d d d d d d  -->
+        </foo>
+    """.trimIndent()
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
-    fun testBasicMarkupOfTokens() {
-        System.err.println("testFoo Started")
-        val project = codeInsightFixture.project
-        var inlays: List<Inlay<*>> = listOf()
+    fun testBasicMarkupOfTokens() = runBlocking {
         codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
 
-        val cursingMarkupService = project.service<CursingMarkupService>()
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
         assertTrue(CursingApplicationListener.handler.initialized.get())
 
-        runBlocking {
-            cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
-        }
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 0)
 
-        runInEdtAndWait {
+        val graphics = withContext(Dispatchers.EDT) {
             PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-
-            inlays = codeInsightFixture.editor.inlayModel.getInlineElementsInRange(0, 1000)
-                .filter { it.getUserData(INLAY_KEY) != null }
-                .toList()
+            cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
         }
 
-        assertEquals(8, inlays.size)
+        assertEquals(8, graphics.size)
     }
 
     @Test
@@ -97,5 +113,125 @@ class CursingMarkupServiceTest {
         assertEquals(50, sorted75[2].startOffset)
         assertEquals(30, sorted75[3].startOffset)
         assertEquals(120, sorted75[4].startOffset)
+    }
+
+    @Test
+    fun testToggleEnabled() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+
+        // Verify tokens are added
+        completeProcessing()
+        var graphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
+        // There should be tokens
+        assertTrue(graphics.isNotEmpty(), "Tokens should be added when cursing is enabled")
+        // Toggle cursing off
+        cursingMarkupService.toggleEnabled()
+        // Verify all tokens are removed
+        completeProcessing()
+        graphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
+        // There should be no tokens
+        assertTrue(graphics.isEmpty(), "All tokens should be removed when cursing is disabled")
+        // Toggle cursing back on
+        cursingMarkupService.toggleEnabled()
+        // Verify tokens are added again
+        completeProcessing()
+        graphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
+        // There should be tokens again
+        assertTrue(graphics.isNotEmpty(), "Tokens should be added when cursing is re-enabled")
+    }
+
+
+    @Test
+    fun testGraphicsByChar() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+
+        withContext(Dispatchers.EDT) {
+            codeInsightFixture.configureByText(XmlFileType.INSTANCE, largeDoc)
+            EditorTestUtil.setEditorVisibleSize(codeInsightFixture.editor, 500, 500)
+        }
+        completeProcessing()
+
+        // Test at beginning of document
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
+        val existingGraphics = cursingMarkupService.pullExistingGraphics(codeInsightFixture.editor)
+
+        var graphics = cursingMarkupService.graphicsByChar(existingGraphics, 11)
+        assertEquals(generateSequence(11) { it + 2 }.take(30).toList(), graphics['a']?.map { it.offset })
+    }
+
+    @Test
+    fun testItRendersTokensAsWeMove() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        withContext(Dispatchers.EDT) {
+            // given a large document that is visible
+            codeInsightFixture.configureByText(XmlFileType.INSTANCE, largeDoc)
+            EditorTestUtil.setEditorVisibleSize(codeInsightFixture.editor, 500, 500)
+            // and we are at offset 11 (just to match below...)
+            codeInsightFixture.editor.caretModel.moveToOffset(11)
+        }
+        completeProcessing()
+        // when we update for this position
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 11)
+        // expect the first 30 'a' tokens were added.
+        assertEquals(
+            generateSequence(11) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
+        // and when we move  halfway down the list  update for this position
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 64)
+        // expect the first 30 'a' tokens were added.
+        assertEquals(
+            generateSequence(35) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
+
+        // and when we move to offset 424
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 424)
+        // expect the last 30 'a' tokens were added.
+        assertEquals(
+            generateSequence(325) { it + 2 }.take(30).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
+        // and when we are in the middle
+        cursingMarkupService.updateCursingTokensNow(codeInsightFixture.editor, 197)
+        // expect the last of the first 15 and first of the last 15 'a' tokens were added.
+        assertEquals(
+            generateSequence(89) { it + 2 }.take(15).plus(generateSequence(277) { it + 2 }.take(15)).toSortedSet(),
+            pullConsumedIndexes(codeInsightFixture.editor, 'a')
+        )
+    }
+
+    @Test
+    fun testDeletingNoOverlap() = runBlocking {
+        val cursingMarkupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+
+        codeInsightFixture.configureByText(XmlFileType.INSTANCE, "<foo>bar</foo>")
+
+        // Verify tokens are added
+        completeProcessing()
+        // and no overlap
+        withContext(Dispatchers.EDT) {
+            cursingMarkupService.validateNoDuplicateGraphics(codeInsightFixture.editor)
+        }
+        //when we delete the first character
+
+        readAndWriteAction {
+            writeAction {
+                WriteCommandAction.writeCommandAction(codeInsightFixture.project)
+                    .withName("Delete Character")
+                    .compute<Unit, Throwable> {
+                        codeInsightFixture.editor.document.deleteString(0, 1)
+                    }
+            }
+        }
+
+        // Verify tokens are added
+        completeProcessing()
+        // and no overlap
+        withContext(Dispatchers.EDT) {
+            cursingMarkupService.validateNoDuplicateGraphics(codeInsightFixture.editor)
+        }
     }
 }

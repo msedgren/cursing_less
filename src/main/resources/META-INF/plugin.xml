@@ -19,11 +19,6 @@
                            key="cursing_less.notification.group.name"/>
         <postStartupActivity implementation="org.cursing_less.listener.CursingApplicationListener$StartupActivity"/>
 
-        <editorActionHandler action="EditorDelete"
-                             implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
-        <editorActionHandler action="EditorBackSpace"
-                             implementationClass="org.cursing_less.handler.CursingDeletionHandler"/>
-
         <!-- Settings -->
         <applicationConfigurable parentId="tools"
                                  instance="org.cursing_less.settings.CursingPreferenceConfigurable"
@@ -31,7 +26,7 @@
                                  key="cursing_less.settings.display_name"/>
 
         <!-- Tool Windows -->
-        <toolWindow id="Cursing Marks"
+        <toolWindow id="cursing_less_marks_window"
                     anchor="bottom"
                     factoryClass="org.cursing_less.toolwindow.CursingMarksToolWindowFactory"
                     icon="/icons/cursingMarksToolWindow.svg"/>

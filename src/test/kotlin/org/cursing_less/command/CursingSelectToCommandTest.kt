@@ -2,7 +2,6 @@ package org.cursing_less.command
 
 import com.intellij.ide.highlighter.XmlFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
@@ -10,9 +9,7 @@ import com.intellij.testFramework.runInEdtAndWait
 import kotlinx.coroutines.runBlocking
 import org.cursing_less.service.CursingCommandService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.util.CursingTestUtils
-import org.cursing_less.command.TokenPosition
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -26,12 +23,14 @@ class CursingSelectToCommandTest {
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        CursingTestUtils.tearDownTestFixture(codeInsightFixture)
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test

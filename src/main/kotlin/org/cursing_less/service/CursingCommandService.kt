@@ -59,9 +59,7 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
         val OkayResponse = VoiceCommandResponse(HttpStatus.SC_OK, "OK")
         val BadResponse = VoiceCommandResponse(HttpStatus.SC_BAD_REQUEST, "ERROR")
 
-
         const val DEFAULT_PORT: Int = 8652
-
         // See com.intellij.openapi.util.BuildNumber.PRODUCT_CODES_TO_PREFIXES
         // TODO this was altered from the original plugin to remove warnings about using JetBrains internal
         //      only libraries. This should work but additional products should be defined like Rust Rover...
@@ -73,12 +71,13 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
             "PyCharm" to 8658, //PyCharm
             "PyCharmCE" to 8658, //PyCharm Community
             "PyCharmEdu" to 8658, // PyCharm Edu
+            "GoLand" to 8659, // GoLand
+            "Rider" to 8660, // Rider
             "RubyMine" to 8661, //RubyMine
             "PhpStorm" to 8662, //PhpStorm
             "WebStorm" to 8663, // WebStorm
             "DataGrip" to 8664, // DataGrip
-            "Rider" to 8660, // Rider
-            "GoLand" to 8659, // GoLand
+            "RustRover" to 8665, // Rust Rover
         )
 
         /**

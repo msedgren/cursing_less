@@ -1,8 +1,11 @@
 package org.cursing_less.command
 
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
 
 /**
@@ -18,14 +21,16 @@ data object CursingToggleMarksToolWindowCommand : VoiceCommand {
         val toolWindowManager = ToolWindowManager.getInstance(project)
         
         // Get the Cursing Marks tool window
-        val toolWindow = toolWindowManager.getToolWindow("Cursing Marks")
+        val toolWindow = toolWindowManager.getToolWindow("cursing_less_marks_window")
         
         if (toolWindow != null) {
             // Toggle the tool window visibility
-            if (toolWindow.isVisible) {
-                toolWindow.hide()
-            } else {
-                toolWindow.show()
+            withContext(Dispatchers.EDT) {
+                if (toolWindow.isVisible) {
+                    toolWindow.hide()
+                } else {
+                    toolWindow.show()
+                }
             }
             
             return CursingCommandService.OkayResponse

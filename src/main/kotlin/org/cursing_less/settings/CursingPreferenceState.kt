@@ -50,7 +50,7 @@ data class CursingPreferenceState(
         // " or ' or ` or : or #, one or more the same non-whitespace characters that is not one of the others,
         // and any other non-whitespace character that does not match the others
         const val DEFAULT_TOKEN_PATTERN: String =
-             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|(([^\\w(){}<>\\[\\]\\s.\"'`:#])\\11+)|([^\\w(){}<>\\[\\]\\s.\"'`:#]+)"
+             "([\\w]+)|([()]+)|([{}]+)|([<>]+)|([\\[\\]]+)|(\\?:)|(/\\*)|(\\*/)|([,\"'`:#])|(([^\\w(){}<>\\[\\]\\s\"'`:#])\\11+)|([^\\w(){}<>\\[\\]\\s\"'`:#]+)"
         const val DEFAULT_USE_PSI_TREE: Boolean = false
         const val DEFAULT_USE_REGEX: Boolean = true
     }

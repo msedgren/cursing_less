@@ -1,7 +1,6 @@
 package org.cursing_less.color_shape
 
 import com.intellij.openapi.diagnostic.thisLogger
-import com.intellij.openapi.util.Key
 import org.cursing_less.util.OffsetDistanceComparator
 
 class ColorAndShapeManager(
@@ -20,18 +19,19 @@ class ColorAndShapeManager(
 
     private var characterState: MutableMap<Char, FreeCursingColorShape> = HashMap()
 
-    companion object {
-        private const val NAME = "CURSING_COLOR_AND_SHAPE_MANAGER"
-        val KEY = Key.create<ColorAndShapeManager>(NAME)
-    }
-
     @Synchronized
     fun consumedAtOffset(offset: Int): ConsumedData? {
         return consumed[offset]
     }
 
     @Synchronized
-    fun consume(offset: Int, text: String, preference: CursingColorShape? = null): CursingColorShape? {
+    fun isFree(cursingColorShape: CursingColorShape, character: Char): Boolean {
+        val free = characterState[character.lowercaseChar()]
+        return free == null || free.available(cursingColorShape)
+    }
+
+    @Synchronized
+    fun consume(offset: Int, text: String, requiredColorShape: CursingColorShape? = null): CursingColorShape? {
         require(text.isNotEmpty()) { "text must not be empty!" }
 
         if (consumed.contains(offset)) {
@@ -45,9 +45,11 @@ class ColorAndShapeManager(
         val existing =
             characterState.computeIfAbsent(lowerCaseCharacter) { FreeCursingColorShape(generatePermutations()) }
         // get the preference (what it was previously set to) at that offset.
-        val preference = preference ?: offsetPreference[offset]
+        val preference = offsetPreference[offset]
+
+        // get the preference (what it was previously set to) at that offset.
         // attempt to consume
-        val consumedThing = existing.consume(preference)
+        val consumedThing = existing.consume(requiredColorShape, preference)
         if (consumedThing != null) {
             val (textToConsume, updatedMap) = correctConsumedForConsumed(offset, text)
             consumed = updatedMap
@@ -81,6 +83,11 @@ class ColorAndShapeManager(
         }.toMutableMap()
 
         return Pair(textToConsume, map)
+    }
+
+    @Synchronized
+    fun setPreference(offset: Int, colorShape: CursingColorShape) {
+        offsetPreference[offset] = colorShape
     }
 
     @Synchronized
@@ -195,12 +202,13 @@ class ColorAndShapeManager(
             free.shuffle()
         }
 
-        fun consume(preference: CursingColorShape?): CursingColorShape? {
-            return if (preference != null && free.remove(preference)) {
+        fun consume(requiredColorShape: CursingColorShape?, preference: CursingColorShape?): CursingColorShape? {
+            return if (requiredColorShape != null && free.remove(requiredColorShape)) {
+                requiredColorShape
+            } else if (requiredColorShape == null && preference != null && free.remove(preference)) {
                 preference
-            } else if (free.isNotEmpty()) {
-                val consumedThing = free.removeFirst()
-                consumedThing
+            } else if (requiredColorShape == null && free.isNotEmpty()) {
+                free.removeFirst()
             } else {
                 null
             }
@@ -209,5 +217,11 @@ class ColorAndShapeManager(
         fun returnFreed(freed: CursingColorShape) {
             free.add(freed)
         }
+
+        fun available(cursingColorShape: CursingColorShape): Boolean {
+            return free.contains(cursingColorShape)
+        }
+
+
     }
 }

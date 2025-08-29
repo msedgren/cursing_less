@@ -1,18 +1,24 @@
 package org.cursing_less.util
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Editor
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.runInEdtAndWait
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.cursing_less.color_shape.CursingColorShape
-import org.cursing_less.listener.CursingApplicationListener
+import org.cursing_less.service.CursingMarkStorageService
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
+import org.cursing_less.toolwindow.CursingMarksToolWindow
+import java.util.SortedSet
 
 /**
  * Utility class containing common functions used across test classes.
@@ -24,28 +30,42 @@ object CursingTestUtils {
      *
      * @return The configured CodeInsightTestFixture
      */
-    fun setupTestFixture(): CodeInsightTestFixture {
+    fun setupTestFixture(): Pair<IdeaProjectTestFixture, CodeInsightTestFixture> {
         val projectTestFixture =
             IdeaTestFixtureFactory.getFixtureFactory().createLightFixtureBuilder(LightProjectDescriptor(), "foo")
                 .fixture
 
         val codeInsightFixture = IdeaTestFixtureFactory.getFixtureFactory().createCodeInsightFixture(projectTestFixture)
         codeInsightFixture.setUp()
-        return codeInsightFixture
+
+        val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        markupService.resetProcessingCount()
+        runBlocking {
+            if (!markupService.isEnabled()) {
+                markupService.toggleEnabled()
+            }
+        }
+
+        return Pair(projectTestFixture, codeInsightFixture)
     }
 
     /**
      * Tears down the provided CodeInsightTestFixture.
      *
+     * @param projectTestFixture
      * @param codeInsightFixture The fixture to tear down
      */
-    fun tearDownTestFixture(codeInsightFixture: CodeInsightTestFixture) {
+    fun tearDownTestFixture(projectTestFixture: IdeaProjectTestFixture, codeInsightFixture: CodeInsightTestFixture) {
+        // Clear any stored marked text
+        val markStorageService = ApplicationManager.getApplication().getService(CursingMarkStorageService::class.java)
+        markStorageService.clearAllMarkedText()
+
         try {
-            runBlocking {
-                ApplicationManager.getApplication().getService(CursingMarkupService::class.java).processExistingWork()
-            }
             runInEdtAndWait(true) {
                 codeInsightFixture.tearDown()
+            }
+            runBlocking {
+                completeProcessing()
             }
         } catch (e: Exception) {
             thisLogger().error("Failed to tear down test fixture", e)
@@ -59,14 +79,45 @@ object CursingTestUtils {
      * @param offset The offset in the editor
      * @return The CursingColorShape at the specified offset, or null if not found
      */
-    fun getCursingColorShape(editor: Editor, offset: Int): CursingColorShape? {
-        var data: CursingColorShape? = null
-        runInEdtAndWait {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+    suspend fun getCursingColorShape(editor: Editor, offset: Int): CursingColorShape? {
+        val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
 
-            data = editor.inlayModel.getInlineElementsInRange(offset, offset)
-                .firstNotNullOfOrNull { it.getUserData(INLAY_KEY) }
-        }
-        return data
+        completeProcessing()
+        return markupService.pullExistingGraphics(editor)
+            .values
+            .asSequence()
+            .flatMap { it }
+            .filter { it.offset == offset }
+            .map { it.cursingColorShape }
+            .firstOrNull()
     }
+
+    suspend fun completeProcessing() {
+        val startTime = System.currentTimeMillis()
+        val waitAmount = 1000L
+        val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        withContext(Dispatchers.EDT) {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        }
+        while ((CursingMarksToolWindow.workToProcess() || markupService.workToProcess()) &&
+            (System.currentTimeMillis() - startTime) < waitAmount
+        ) {
+            delay(10L)
+        }
+
+        if (markupService.workToProcess()) {
+            markupService.resetProcessingCount()
+        }
+
+    }
+
+    fun pullConsumedIndexes(editor: Editor, character: Char): SortedSet<Int> {
+        val markupService = ApplicationManager.getApplication().getService(CursingMarkupService::class.java)
+        return markupService
+            .pullExistingGraphics(editor)
+            .filter { character.lowercaseChar() == editor.document.charsSequence[it.key].lowercaseChar() }
+            .keys
+            .toSortedSet()
+    }
+
 }

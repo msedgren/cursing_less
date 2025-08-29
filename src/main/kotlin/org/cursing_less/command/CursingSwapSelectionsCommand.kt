@@ -9,8 +9,8 @@ import com.intellij.openapi.util.TextRange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingCommandService
-import kotlin.math.min
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Command that swaps the content of two cursor selections identified by their relative number.

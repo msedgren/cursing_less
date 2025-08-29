@@ -8,13 +8,13 @@ import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
-import com.intellij.testFramework.runInEdtAndWait
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.cursing_less.service.CursingMarkupService
-import org.cursing_less.service.CursingMarkupService.Companion.INLAY_KEY
 import org.cursing_less.util.CursingTestUtils
+import org.cursing_less.util.CursingTestUtils.completeProcessing
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -23,17 +23,18 @@ import org.junit.jupiter.api.Test
 class ToggleMarkupCommandTest {
 
     lateinit var codeInsightFixture: CodeInsightTestFixture
+    lateinit var projectTestFixture: IdeaProjectTestFixture
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
     }
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
@@ -55,26 +56,26 @@ class ToggleMarkupCommandTest {
         // Verify that markup is present initially
         cursingMarkupService.updateCursingTokensNow(editor, 0)
 
-        var inlays = getInlays(editor)
-        assertTrue(inlays.isNotEmpty(), "Inlays should be present initially")
-        val initialInlayCount = inlays.size
+        var graphics = cursingMarkupService.pullExistingGraphics(editor)
+        assertTrue(graphics.isNotEmpty(), "Graphics should be present initially")
+        val initialInlayCount = graphics.size
 
         // Run the toggle command to disable markup
         toggleMarkupAndWait(cursingMarkupService, project, editor)
 
         // Verify that markup is removed
-        inlays = getInlays(editor)
-        assertTrue(inlays.isEmpty(), "Inlays should be removed after toggling markup off")
+        graphics = cursingMarkupService.pullExistingGraphics(editor)
+        assertTrue(graphics.isEmpty(), "Graphics should be removed after toggling markup off")
 
         // Run the toggle command again to enable markup
         toggleMarkupAndWait(cursingMarkupService, project, editor)
 
         // Verify that markup is present again
-        inlays = getInlays(editor)
+        graphics = cursingMarkupService.pullExistingGraphics(editor)
 
-        // There should be inlays present again
-        assertTrue(inlays.isNotEmpty(), "Inlays should be present after toggling markup on again")
-        assertEquals(initialInlayCount, inlays.size, "The number of inlays should be the same as initially")
+        // There should be graphics present again
+        assertTrue(graphics.isNotEmpty(), "Graphics should be present after toggling markup on again")
+        assertEquals(initialInlayCount, graphics.size, "The number of graphics should be the same as initially")
     }
 
     private suspend fun toggleMarkupAndWait(
@@ -82,19 +83,7 @@ class ToggleMarkupCommandTest {
         project: Project,
         editor: Editor
     ) {
-        cursingMarkupService.clearExistingWork()
         ToggleMarkupCommand.run(listOf(""), project, editor)
-        cursingMarkupService.processExistingWork()
-    }
-
-    private suspend fun getInlays(editor: Editor): List<Inlay<*>> {
-        var inlays: List<Inlay<*>> = listOf()
-        withContext(Dispatchers.EDT) {
-            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
-            inlays = editor.inlayModel.getInlineElementsInRange(0, 1000)
-                .filter { it.getUserData(INLAY_KEY) != null }
-                .toList()
-        }
-        return inlays
+        completeProcessing()
     }
 }

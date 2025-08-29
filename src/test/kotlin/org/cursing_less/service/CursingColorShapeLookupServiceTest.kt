@@ -1,7 +1,9 @@
 package org.cursing_less.service
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaProjectTestFixture
 import com.intellij.testFramework.runInEdtAndWait
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.util.CursingTestUtils
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test
 
 class CursingColorShapeLookupServiceTest {
 
+    lateinit var projectTestFixture: IdeaProjectTestFixture
     lateinit var codeInsightFixture: CodeInsightTestFixture
     lateinit var lookupService: CursingColorShapeLookupService
     lateinit var preferenceService: CursingPreferenceService
@@ -19,18 +22,17 @@ class CursingColorShapeLookupServiceTest {
 
     @BeforeEach
     fun setUp() {
-        codeInsightFixture = CursingTestUtils.setupTestFixture()
+        val (projectTestFixture, codeInsightFixture) = CursingTestUtils.setupTestFixture()
+        this.projectTestFixture = projectTestFixture
+        this.codeInsightFixture = codeInsightFixture
 
-        val project = codeInsightFixture.project
-        lookupService = project.service<CursingColorShapeLookupService>()
-        preferenceService = project.service<CursingPreferenceService>()
+        lookupService = ApplicationManager.getApplication().getService(CursingColorShapeLookupService::class.java)
+        preferenceService = ApplicationManager.getApplication().getService(CursingPreferenceService::class.java)
     }
 
     @AfterEach
     fun tearDown() {
-        runInEdtAndWait(true) {
-            codeInsightFixture.tearDown()
-        }
+        CursingTestUtils.tearDownTestFixture(projectTestFixture, codeInsightFixture)
     }
 
     @Test
