@@ -129,7 +129,7 @@ class CursingTokenService() {
                 .asSequence()
                 .filter { visibleArea.contains(it.startOffset) }
                 .map { Pair(it, it.text) }
-                .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() && it.second[0] != '.' }
+                .filter { it.second.isNotBlank() && !it.second[0].isWhitespace() }
                 .map { (element, text) ->
                     Pair(element.startOffset, text)
                 }

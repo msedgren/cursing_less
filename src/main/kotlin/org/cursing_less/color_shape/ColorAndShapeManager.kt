@@ -27,7 +27,7 @@ class ColorAndShapeManager(
     @Synchronized
     fun isFree(cursingColorShape: CursingColorShape, character: Char): Boolean {
         val free = characterState[character.lowercaseChar()]
-        return free != null && free.available(cursingColorShape)
+        return free == null || free.available(cursingColorShape)
     }
 
     @Synchronized

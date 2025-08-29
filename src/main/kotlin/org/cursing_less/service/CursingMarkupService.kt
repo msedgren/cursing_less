@@ -134,9 +134,9 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             val tokensByOffset =
                 tokenService.findCursingTokens(editor).associateTo(mutableMapOf(), { it.first to it.second })
 
-            val existingGraphics = pullExistingGraphics(editor)
-
             withContext(Dispatchers.EDT + NonCancellable) {
+                val existingGraphics = pullExistingGraphics(editor)
+
                 accountForAndCleanExistingGraphics(
                     existingGraphics,
                     tokensByOffset,
@@ -170,39 +170,60 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             val existingToken = tokensByOffset[offset]
             // if there is no token at the offset, remove the graphics
             if (existingToken != null) {
-                val character = existingToken[0].lowercaseChar()
-                val graphicsIterator = graphics.iterator()
-                // otherwise, make sure the graphic is not already consumed
-                while (graphicsIterator.hasNext()) {
-                    val next = graphicsIterator.next()
-                    if (!colorAndShapeManager.isFree(next.cursingColorShape, character)) {
-                        graphicsIterator.remove()
-                        next.highlighter.dispose()
-                    }
-                }
+                removeAlreadyConsumedExistingGraphics(graphics, existingToken, colorAndShapeManager)
                 // if there are graphics that are valid at that offset then use them.
                 if (graphics.isNotEmpty()) {
-                    val graphic = graphics[0]
-                    // but make sure there is only one
-                    while (graphics.size > 1) {
-                        thisLogger().warn("Multiple graphics found at offset $offset: $graphics")
-                        graphics.removeLast().highlighter.dispose()
-                        colorAndShapeManager.setPreference(graphic.offset, graphic.cursingColorShape)
-                    }
-                    // and update it to be correct.
-                    if (graphic.text != existingToken) {
-                        graphic.text = existingToken
-                    }
+                    val graphic = reduceToSingleGraphicAndClean(graphics, offset, existingToken, colorAndShapeManager)
                     tokensByOffset.remove(offset)
-                    checkNotNull(
-                        colorAndShapeManager.consume(graphic.offset, graphic.text, graphic.cursingColorShape)
-                    ) {
-                        "Color and shape mismatch. Failed to consume color and shape that should be available."
-                    }
+                    consumeExistingGraphic(graphic, offset, colorAndShapeManager)
                 }
             } else {
                 graphics.forEach { it.highlighter.dispose() }
                 iterator.remove()
+            }
+        }
+    }
+
+    private fun consumeExistingGraphic(graphic: CursingGraphics, offset: Int, colorAndShapeManager: ColorAndShapeManager) {
+        checkNotNull(
+            colorAndShapeManager.consume(offset, graphic.text, graphic.cursingColorShape)
+        ) {
+            "Color and shape mismatch. Failed to consume color and shape that should be available."
+        }
+    }
+
+    private fun reduceToSingleGraphicAndClean(
+        graphics: MutableList<CursingGraphics>,
+        offset: Int,
+        existingToken: String,
+        colorAndShapeManager: ColorAndShapeManager
+    ): CursingGraphics {
+        val graphic = graphics[0]
+        // but make sure there is only one
+        while (graphics.size > 1) {
+            thisLogger().warn("Multiple graphics found at offset $offset: $graphics")
+            graphics.removeLast().highlighter.dispose()
+        }
+        // and update it to be correct.
+        colorAndShapeManager.setPreference(graphic.offset, graphic.cursingColorShape)
+        if (graphic.text != existingToken) {
+            graphic.text = existingToken
+        }
+        return graphic
+    }
+
+    private fun removeAlreadyConsumedExistingGraphics(
+        graphics: MutableList<CursingGraphics>,
+        token: String,
+        colorAndShapeManager: ColorAndShapeManager
+    ) {
+        val graphicsAtOffsetIterator = graphics.iterator()
+        val character = token[0].lowercaseChar()
+        while (graphicsAtOffsetIterator.hasNext()) {
+            val next = graphicsAtOffsetIterator.next()
+            if (!colorAndShapeManager.isFree(next.cursingColorShape, character)) {
+                graphicsAtOffsetIterator.remove()
+                next.highlighter.dispose()
             }
         }
     }
