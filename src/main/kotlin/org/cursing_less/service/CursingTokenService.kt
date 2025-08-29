@@ -18,9 +18,6 @@ import com.intellij.util.io.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
-import org.cursing_less.color_shape.ColorAndShapeManager
-import org.cursing_less.color_shape.CursingColorShape
-import org.cursing_less.util.OffsetDistanceComparator
 
 /**
  * Service responsible for finding and processing tokens in text and a PsiTree.

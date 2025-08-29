@@ -7,12 +7,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.platform.util.coroutines.childScope
 import com.intellij.platform.util.coroutines.flow.debounceBatch
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.cancellable
@@ -55,8 +54,9 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
     private val coroutineScope by lazy {
         ApplicationManager.getApplication().getService(CursingScopeService::class.java)
             .coroutineScope
-            .childScope("CursingMarksToolWindow")
     }
+
+    private var collectorJob: Job? = null
 
     private val textArea = JTextArea().apply {
         isEditable = false
@@ -89,8 +89,8 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
 
     init {
         instances.add(this)
-        coroutineScope.launch(Dispatchers.Unconfined) {
-            var debouncedFlow = flow.debounceBatch(250.milliseconds)
+        collectorJob = coroutineScope.launch(Dispatchers.Unconfined) {
+            val debouncedFlow = flow.debounceBatch(250.milliseconds)
             debouncedFlow
                 .cancellable()
                 .collect {
@@ -100,8 +100,8 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
                         processingCount.decrementAndGet()
                     }
                 }
-        }.invokeOnCompletion {
-            resetProcessingCount()
+        }.also { job ->
+            job.invokeOnCompletion { resetProcessingCount() }
         }
     }
 
@@ -129,7 +129,8 @@ class CursingMarksToolWindow(private val toolWindow: ToolWindow) {
         Disposer.register(toolWindow.disposable) {
             instances.remove(this)
             connection.disconnect()
-            coroutineScope.cancel()
+            collectorJob?.cancel()
+            collectorJob = null
         }
     }
 

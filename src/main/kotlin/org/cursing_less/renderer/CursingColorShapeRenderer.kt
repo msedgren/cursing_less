@@ -3,12 +3,10 @@ package org.cursing_less.renderer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.VisualPosition
-import com.intellij.openapi.editor.colors.EditorFontType
 import com.intellij.openapi.editor.markup.CustomHighlighterRenderer
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import org.cursing_less.color_shape.CursingColorShape
 import org.cursing_less.color_shape.CursingShape
-import org.cursing_less.service.CursingPreferenceService
 import org.cursing_less.service.CursingRendererService
 import java.awt.Graphics
 import java.awt.Graphics2D
