@@ -99,7 +99,7 @@ class CursingTokenServiceTest {
                 Arguments.of("/*comment*/", listOf("/*", "comment", "*/")),
                 Arguments.of("# hello", listOf("#", "hello")),
                 Arguments.of("// foo", listOf("//", "foo")),
-                Arguments.of("hey you, over there.", listOf("hey", "you", ",", "over", "there")),
+                Arguments.of("hey you, over there.", listOf("hey", "you", ",", "over", "there", ".")),
                 Arguments.of("foo(a!!, b)", listOf("foo", "(", "a", "!!", ",", "b", ")")),
             )
         }

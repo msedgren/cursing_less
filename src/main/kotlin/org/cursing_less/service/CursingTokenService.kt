@@ -63,7 +63,7 @@ class CursingTokenService() {
 
                 // Only use PSI tree if enabled in preferences
                 if (preferenceService.usePsiTree) {
-                    found.plus(
+                    found = found.plus(
                         findVisiblePsi(editor, visibleArea)
                     )
                 }
