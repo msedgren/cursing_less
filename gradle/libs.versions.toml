@@ -1,14 +1,14 @@
 [versions]
 # libraries
-jupiter = "5.13.4"
+jupiter = "6.0.0"
 junit = "4.13.2"
 
 # plugins
 changelog = "2.4.0"
-intelliJPlatform = "2.7.2"
+intelliJPlatform = "2.9.0"
 kotlin = "2.1.21"
-kover = "0.9.1"
-qodana = "2025.1.1"
+kover = "0.9.2"
+qodana = "2025.2.1"
 
 [libraries]
 jupiter-api = {module = "org.junit.jupiter:junit-jupiter-api", version.ref = "jupiter"}

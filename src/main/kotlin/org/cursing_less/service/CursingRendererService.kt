@@ -36,11 +36,4 @@ class CursingRendererService {
         val squareSizeToUse = minOf(widthToUse, heightToUse)
         return Pair(squareSizeToUse, squareSizeToUse)
     }
-
-    fun calculateMinimumHeightNeeded(editor: Editor): Int {
-        val textMetrics = calculateTextMetrics(editor)
-        val (_, height) = calculateSpace('C', textMetrics)
-        val lineHeight = editor.lineHeight
-        return height + textMetrics.height + 2
-    }
 }

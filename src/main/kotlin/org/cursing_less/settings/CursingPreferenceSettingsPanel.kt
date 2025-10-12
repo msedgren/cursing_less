@@ -43,7 +43,7 @@ class CursingPreferenceSettingsPanel(private val state: CursingPreferenceState) 
     private val newDarkColorPanel = ColorPanel()
 
     // Inner class for color items
-    private inner class ColorItem(
+    private class ColorItem(
         val name: String,
         enabled: Boolean,
         lightColor: Color,

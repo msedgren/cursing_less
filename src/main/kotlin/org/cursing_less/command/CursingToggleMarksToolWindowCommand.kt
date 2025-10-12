@@ -21,7 +21,7 @@ data object CursingToggleMarksToolWindowCommand : VoiceCommand {
         val toolWindowManager = ToolWindowManager.getInstance(project)
         
         // Get the Cursing Marks tool window
-        val toolWindow = toolWindowManager.getToolWindow("cursing_less_marks_window")
+        val toolWindow = toolWindowManager.getToolWindow("Cursing Marks")
         
         if (toolWindow != null) {
             // Toggle the tool window visibility

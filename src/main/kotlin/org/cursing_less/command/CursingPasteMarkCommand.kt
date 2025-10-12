@@ -30,16 +30,10 @@ data object CursingPasteMarkCommand : VoiceCommand {
 
     override suspend fun run(commandParameters: List<String>, project: Project, editor: Editor?): VoiceCommandResponse {
         // Validate input parameters
-        val markNumber = pullMark(commandParameters, editor)
-        if (markNumber == null) {
-            return CursingCommandService.BadResponse
-        }
+        val markNumber = pullMark(commandParameters, editor) ?: return CursingCommandService.BadResponse
 
         // Get the marked text
-        val markedText = getMarkedText(markNumber)
-        if (markedText == null) {
-            return CursingCommandService.BadResponse
-        }
+        val markedText = getMarkedText(markNumber) ?: return CursingCommandService.BadResponse
 
         // Insert the marked text at the current cursor position(s) on EDT
         return withContext(Dispatchers.EDT) {

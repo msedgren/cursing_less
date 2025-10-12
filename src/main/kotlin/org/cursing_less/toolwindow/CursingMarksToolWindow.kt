@@ -3,6 +3,7 @@ package org.cursing_less.toolwindow
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
@@ -31,7 +32,7 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Tool window factory for displaying the current marks in the editor.
  */
-class CursingMarksToolWindowFactory : ToolWindowFactory {
+class CursingMarksToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val marksToolWindow = CursingMarksToolWindow(toolWindow)
         marksToolWindow.initializeContent()

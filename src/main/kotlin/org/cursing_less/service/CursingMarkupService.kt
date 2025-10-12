@@ -132,7 +132,7 @@ class CursingMarkupService(private val coroutineScope: CoroutineScope) : Disposa
             colorAndShapeManager.freeAll()
 
             val tokensByOffset =
-                tokenService.findCursingTokens(editor).associateTo(mutableMapOf(), { it.first to it.second })
+                tokenService.findCursingTokens(editor).associateTo(mutableMapOf()) { it.first to it.second }
 
             withContext(Dispatchers.EDT + NonCancellable) {
                 val existingGraphics = pullExistingGraphics(editor)
