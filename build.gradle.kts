@@ -119,7 +119,12 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // recommended()
+            // replaced above.
+            select {
+                sinceBuild = providers.gradleProperty("pluginSinceBuild")
+                untilBuild = "243.*"
+            }
         }
     }
 }
