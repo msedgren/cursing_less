@@ -1,6 +1,6 @@
 [versions]
 # libraries
-jupiter = "6.0.0"
+jupiter = "6.0.1"
 junit = "4.13.2"
 
 # plugins
