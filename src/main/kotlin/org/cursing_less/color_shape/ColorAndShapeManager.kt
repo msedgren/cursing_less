@@ -71,7 +71,7 @@ class ColorAndShapeManager(
             val endOffsetOverlaps = endOffset > it.value.startOffset && endOffset <= it.value.endOffset
             if (endOffsetOverlaps && !startOffsetOverlaps) {
                 textToConsume =
-                    textToConsume.substring(0, it.value.startOffset - offset)
+                    textToConsume.take(it.value.startOffset - offset)
             }
             if (startOffsetOverlaps) {
                 it.value.copy(

@@ -107,7 +107,7 @@ data class CursingPreferenceState(
     }
 
     class ColorStateConverter: Converter<List<ColorState>>() {
-        override fun fromString(value: String): List<ColorState>? {
+        override fun fromString(value: String): List<ColorState> {
             return value.split(" ")
                 .chunked(4)
                 .map { ColorState(it[0], it[1].toBooleanStrict(), it[2], it[3]) }
@@ -133,11 +133,11 @@ data class CursingPreferenceState(
     }
 
     class ShapeStateConverter: Converter<List<ShapeState>>() {
-        override fun toString(value: List<ShapeState>): String? {
+        override fun toString(value: List<ShapeState>): String {
             return value.joinToString(" ") { "${it.name} ${it.enabled}" }
         }
 
-        override fun fromString(value: String): List<ShapeState>? {
+        override fun fromString(value: String): List<ShapeState> {
             return value.split(" ")
                 .chunked(2)
                 .map { ShapeState(it[0], it[1].toBooleanStrict()) }

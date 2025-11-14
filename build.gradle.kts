@@ -119,7 +119,12 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // recommended()
+            // replaced above.
+            select {
+                sinceBuild = providers.gradleProperty("pluginSinceBuild")
+                untilBuild = "243.*"
+            }
         }
     }
 }
@@ -174,8 +179,8 @@ intellijPlatformTesting {
 
 tasks.qodanaScan {
     if (System.getProperty("os.arch") == "aarch64") {
-        environment.put("JAVA_TOOL_OPTIONS", "-XX:UseSVE=0")
-        environment.put("JDK_JAVA_OPTIONS", "-XX:UseSVE=0")
+        environment["JAVA_TOOL_OPTIONS"] = "-XX:UseSVE=0"
+        environment["JDK_JAVA_OPTIONS"] = "-XX:UseSVE=0"
     }
 }
 
