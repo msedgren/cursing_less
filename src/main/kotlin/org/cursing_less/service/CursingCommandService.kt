@@ -37,6 +37,7 @@ import java.nio.file.Path
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.pathString
 
 @Service(Service.Level.APP)
 class CursingCommandService(private val coroutineScope: CoroutineScope) : Disposable {
@@ -102,7 +103,10 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
      * @throws IOException If there is an error writing to the file
      */
     private fun writeNonceToFile(nonce: String, port: Int): Path {
-        val noncePath = FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir"), "vcidea_$port")
+        val noncePath = FileSystems.getDefault()
+            .getPath(System.getProperty("java.io.tmpdir"), "vcidea_$port")
+            .toAbsolutePath()
+        thisLogger().debug("Writing nonce to file: $noncePath")
         Files.write(noncePath, nonce.toByteArray())
         return noncePath
     }
@@ -150,7 +154,7 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
             val existingNonce = readNonceFromFile(port)
 
             if (existingNonce.isNullOrBlank()) {
-                thisLogger().info("No existing nonce file found")
+                thisLogger().info("No existing nonce file found. Not attempting to shutdown conflicting service")
                 return false
             }
 
@@ -160,6 +164,7 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
                 return false
             }
 
+            thisLogger().info("Attempting to shut down existing conflicting service")
             val shutdownUrl = "http://localhost:$port/$existingNonce/shutdown"
             val shutdownResponse = HttpRequests.request(shutdownUrl)
                 .connectTimeout(2000)
@@ -212,7 +217,9 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
 
                 // Generate the nonce and store it
                 nonce = generateNonce()
+                thisLogger().debug("Generated nonce: $nonce")
                 pathToNonce = writeNonceToFile(nonce, port)
+                thisLogger().debug("Nonce written to file: ${pathToNonce?.toString()}")
 
                 // https://stackoverflow.com/questions/3732109/simple-http-server-in-java-using-only-java-se-api#3732328
                 val loopbackSocket = InetSocketAddress(InetAddress.getLoopbackAddress(), port)
@@ -221,6 +228,7 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
                 server?.executor = null
                 server?.start()
                 initialized.set(true)
+                thisLogger().info("Started cursing_less plugin on port $port with nonce $nonce created at location: ${pathToNonce?.toString()}")
             }
         } catch (e: Exception) {
             notifyStartupFailure(e)
@@ -232,9 +240,10 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
     fun shutdown() {
         try {
             try {
-                val nonce = pathToNonce
-                if (nonce != null) {
-                    Files.delete(nonce)
+                val fileToDelete = pathToNonce
+                if (fileToDelete != null) {
+                    thisLogger().debug("Attempting to delete nonce file: ${fileToDelete}")
+                    Files.delete(fileToDelete)
                 }
             } catch (e: Exception) {
                 thisLogger().error("Failed to cleanup nonce file", e)
@@ -242,7 +251,7 @@ class CursingCommandService(private val coroutineScope: CoroutineScope) : Dispos
 
             if (initialized.get()) {
                 server?.stop(1)
-                thisLogger().info("Completed cleanup of plugin")
+                thisLogger().info("Completed cleanup of plugin with nonce $nonce at location: ${pathToNonce?.toString()}")
             }
         } finally {
             pathToNonce = null
