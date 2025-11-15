@@ -4,6 +4,17 @@
 
 ## [Unreleased] 
 
+## [0.2.2]
+
+### Changed
+- Upgraded dependencies.
+
+## [0.2.1]
+
+### Changed
+- Upgraded dependencies.
+- Renamed the marks tool window.
+- Logging around generating the nonce, startup, and shutdown.
 
 ## [0.2.0]
 
